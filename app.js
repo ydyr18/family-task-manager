@@ -491,6 +491,95 @@ class UIManager {
                 }
             });
         }
+
+        // Event delegation for all dynamic buttons - this solves the re-render problem!
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('button') || e.target.closest('[data-action]') || e.target;
+            
+            // Handle edit user buttons
+            if (target.hasAttribute('data-edit-user')) {
+                e.preventDefault();
+                const userId = parseInt(target.getAttribute('data-edit-user'));
+                this.editUser(userId);
+                return;
+            }
+            
+            // Handle edit task buttons
+            if (target.hasAttribute('data-edit-task')) {
+                e.preventDefault();
+                const taskId = parseInt(target.getAttribute('data-edit-task'));
+                this.editTask(taskId);
+                return;
+            }
+            
+            // Handle edit reward buttons
+            if (target.hasAttribute('data-edit-reward')) {
+                e.preventDefault();
+                const rewardId = parseInt(target.getAttribute('data-edit-reward'));
+                this.editReward(rewardId);
+                return;
+            }
+            
+            // Handle reactivate task
+            if (target.hasAttribute('data-reactivate-task')) {
+                e.preventDefault();
+                const taskId = parseInt(target.getAttribute('data-reactivate-task'));
+                this.reactivateTask(taskId);
+                return;
+            }
+            
+            // Handle deactivate task
+            if (target.hasAttribute('data-deactivate-task')) {
+                e.preventDefault();
+                const taskId = parseInt(target.getAttribute('data-deactivate-task'));
+                this.deactivateTask(taskId);
+                return;
+            }
+            
+            // Handle profile cards
+            if (target.hasAttribute('data-show-profile')) {
+                e.preventDefault();
+                const userId = parseInt(target.getAttribute('data-show-profile'));
+                this.showUserProfile(userId);
+                return;
+            }
+            
+            // Handle room cards
+            if (target.hasAttribute('data-show-room')) {
+                e.preventDefault();
+                const room = target.getAttribute('data-show-room');
+                this.showRoomTasks(room);
+                return;
+            }
+            
+            // Handle task cards
+            if (target.hasAttribute('data-start-task')) {
+                e.preventDefault();
+                const taskId = parseInt(target.getAttribute('data-start-task'));
+                this.startTask(taskId);
+                return;
+            }
+            
+            // Handle timer buttons
+            if (target.hasAttribute('data-start-timer')) {
+                e.preventDefault();
+                this.startTimer();
+                return;
+            }
+            
+            if (target.hasAttribute('data-stop-timer')) {
+                e.preventDefault();
+                this.stopTimer();
+                return;
+            }
+            
+            // Handle modal close
+            if (target.hasAttribute('data-close-modal')) {
+                e.preventDefault();
+                this.closeModal();
+                return;
+            }
+        });
     }
 
     render() {
@@ -515,7 +604,7 @@ class UIManager {
             const statusText = performingStatus.isPerforming ? 'בביצוע משימה' : '';
             
             return `
-                <div class="profile-card ${statusClass}" onclick="showUserProfile(${user.id})">
+                <div class="profile-card ${statusClass}" data-show-profile="${user.id}">
                     <div class="profile-avatar">
                         ${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : user.name.charAt(0)}
                         ${performingStatus.isPerforming ? '<div class="status-indicator"></div>' : ''}
@@ -539,7 +628,7 @@ class UIManager {
         container.innerHTML = rooms.map(room => {
             const taskCount = this.taskManager.getRoomTasks(room).length;
             return `
-                <div class="room-card" onclick="showRoomTasks('${room}')">
+                <div class="room-card" data-show-room="${room}">
                     <div class="room-image">
                         ${this.getRoomIcon(room)}
                     </div>
@@ -576,7 +665,7 @@ class UIManager {
             
             return `
                 <div class="task-card ${task.difficulty} ${availabilityClass}" 
-                     ${isAvailable ? `onclick="startTask(${task.id})"` : ''}>
+                     ${isAvailable ? `data-start-task="${task.id}"` : ''}>
                     <div class="task-header">
                         <div class="task-title">${task.title}</div>
                         <div class="task-difficulty ${task.difficulty}">${task.difficulty}</div>
@@ -750,7 +839,7 @@ class UIManager {
         
         document.getElementById('modalBody').innerHTML = `
             <div class="task-timer-screen">
-                <button class="close-btn" onclick="closeModal()">&times;</button>
+                <button class="close-btn" data-close-modal>&times;</button>
                 <h2>${task.title}</h2>
                 <div class="task-info">
                     <div class="task-description">${task.description}</div>
@@ -773,7 +862,7 @@ class UIManager {
                 <div class="timer-container">
                     <div class="timer-display" id="timerDisplay">00:00</div>
                     <div class="timer-controls">
-                        <button class="timer-btn stop" id="stopTimerBtn" onclick="stopTimer()">
+                        <button class="timer-btn stop" id="stopTimerBtn" data-stop-timer>
                             סיים משימה
                         </button>
                     </div>
@@ -840,7 +929,7 @@ class UIManager {
         
         document.getElementById('modalBody').innerHTML = `
             <div class="task-timer-screen">
-                <button class="close-btn" onclick="closeModal()">&times;</button>
+                <button class="close-btn" data-close-modal>&times;</button>
                 <h2>${task.title}</h2>
                 <div class="task-info">
                     <div class="task-description">${task.description}</div>
@@ -863,10 +952,10 @@ class UIManager {
                 <div class="timer-container">
                     <div class="timer-display" id="timerDisplay">00:00</div>
                     <div class="timer-controls">
-                        <button class="timer-btn start" id="startTimerBtn" onclick="startTimer()">
+                        <button class="timer-btn start" id="startTimerBtn" data-start-timer>
                             התחל טיימר
                         </button>
-                        <button class="timer-btn stop" id="stopTimerBtn" onclick="stopTimer()" disabled>
+                        <button class="timer-btn stop" id="stopTimerBtn" data-stop-timer>
                             סיים משימה
                         </button>
                     </div>
@@ -1071,15 +1160,15 @@ class UIManager {
                 </div>
                 <div class="task-actions">
                     ${!task.isActive ? `
-                        <button class="btn-primary" onclick="reactivateTask(${task.id})">
+                        <button class="btn-primary" data-reactivate-task="${task.id}">
                             הפעל מחדש
                         </button>
                     ` : `
-                        <button class="btn-secondary" onclick="deactivateTask(${task.id})">
+                        <button class="btn-secondary" data-deactivate-task="${task.id}">
                             השבת
                         </button>
                     `}
-                    <button class="btn-secondary" onclick="editTask(${task.id})">
+                    <button class="btn-secondary" data-edit-task="${task.id}">
                         ערוך
                     </button>
                 </div>
@@ -1102,7 +1191,7 @@ class UIManager {
                     ${reward.cost} נקודות
                 </div>
                 <div class="task-actions">
-                    <button class="btn-secondary" onclick="editReward(${reward.id})">
+                    <button class="btn-secondary" data-edit-reward="${reward.id}">
                         ערוך
                     </button>
                 </div>
@@ -1126,7 +1215,7 @@ class UIManager {
                     ${user.points} נקודות
                 </div>
                 <div class="task-actions">
-                    <button class="btn-secondary" onclick="editUser(${user.id})">
+                    <button class="btn-secondary" data-edit-user="${user.id}">
                         ערוך
                     </button>
                 </div>
@@ -1231,7 +1320,7 @@ class UIManager {
                     `).join('')}
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" data-close-modal>ביטול</button>
                     <button type="submit" class="btn-primary">הוסף משימה</button>
                 </div>
             </form>
@@ -1275,7 +1364,7 @@ class UIManager {
                     <input type="number" name="cost" min="1" required>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" data-close-modal>ביטול</button>
                     <button type="submit" class="btn-primary">הוסף פרס</button>
                 </div>
             </form>
@@ -1324,7 +1413,7 @@ class UIManager {
                     <small>אופציונלי - תמונה לפרופיל</small>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" data-close-modal>ביטול</button>
                     <button type="submit" class="btn-primary">הוסף משתמש</button>
                 </div>
             </form>
@@ -1398,7 +1487,7 @@ class UIManager {
                     <small>אופציונלי - תמונה חדשה לפרופיל</small>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" data-close-modal>ביטול</button>
                     <button type="submit" class="btn-primary">שמור שינויים</button>
                 </div>
             </form>
@@ -1570,7 +1659,7 @@ class UIManager {
                     `).join('')}
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" data-close-modal>ביטול</button>
                     <button type="submit" class="btn-primary">שמור שינויים</button>
                 </div>
             </form>
@@ -1617,7 +1706,7 @@ class UIManager {
                     <input type="number" name="cost" value="${reward.cost}" min="1" required>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" data-close-modal>ביטול</button>
                     <button type="submit" class="btn-primary">שמור שינויים</button>
                 </div>
             </form>
@@ -1702,7 +1791,7 @@ class UIManager {
     }
 }
 
-// Global functions for window scope
+// Global functions for window scope - only keeping essential ones
 window.showScreen = function(screenId) {
     ui.showScreen(screenId);
 };
@@ -1711,54 +1800,8 @@ window.showAdminTab = function(tabName) {
     ui.showAdminTab(tabName);
 };
 
-window.closeModal = function() {
-    ui.closeModal();
-};
-
 window.goBackFromTask = function() {
     ui.showScreen(ui.previousScreen);
-};
-
-// User and Profile functions
-window.showUserProfile = function(userId) {
-    ui.showUserProfile(userId);
-};
-
-window.showRoomTasks = function(room) {
-    ui.showRoomTasks(room);
-};
-
-window.startTask = function(taskId) {
-    ui.startTask(taskId);
-};
-
-window.startTimer = function() {
-    ui.startTimer();
-};
-
-window.stopTimer = function() {
-    ui.stopTimer();
-};
-
-// Admin functions
-window.editUser = function(userId) {
-    ui.editUser(userId);
-};
-
-window.editTask = function(taskId) {
-    ui.editTask(taskId);
-};
-
-window.editReward = function(rewardId) {
-    ui.editReward(rewardId);
-};
-
-window.reactivateTask = function(taskId) {
-    ui.reactivateTask(taskId);
-};
-
-window.deactivateTask = function(taskId) {
-    ui.deactivateTask(taskId);
 };
 
 // Initialize the application
