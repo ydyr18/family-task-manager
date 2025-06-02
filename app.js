@@ -178,8 +178,40 @@ class FamilyTaskManager {
 
     // Save data to localStorage
     saveData(data = this.data) {
-        localStorage.setItem('familyTaskData', JSON.stringify(data));
-        this.data = data;
+        try {
+            const dataString = JSON.stringify(data);
+            console.log('💾 Saving data, size:', Math.round(dataString.length / 1024), 'KB');
+            localStorage.setItem('familyTaskData', dataString);
+            this.data = data;
+            console.log('✅ Data saved successfully');
+        } catch (error) {
+            console.error('❌ Error saving data:', error);
+            if (error.name === 'QuotaExceededError') {
+                alert('🚫 אחסון מלא! התמונות גדולות מדי.\n\nפתרונות:\n1. השתמש בתמונות קטנות יותר\n2. מחק תמונות ישנות\n3. עשה גיבוי והתחל מחדש');
+                
+                // Try to save without the new avatar as fallback
+                const dataWithoutNewAvatars = JSON.parse(JSON.stringify(data));
+                dataWithoutNewAvatars.users.forEach(user => {
+                    if (user.avatar && user.avatar.length > 100000) { // Remove very large avatars
+                        console.log('🗑️ Removing large avatar for user:', user.name);
+                        user.avatar = null;
+                    }
+                });
+                
+                try {
+                    localStorage.setItem('familyTaskData', JSON.stringify(dataWithoutNewAvatars));
+                    this.data = dataWithoutNewAvatars;
+                    alert('✅ הנתונים נשמרו ללא התמונות הגדולות.');
+                    return true;
+                } catch (fallbackError) {
+                    console.error('❌ Even fallback save failed:', fallbackError);
+                    alert('💥 שגיאה קריטית! נסה לרענן את הדף או לעשות גיבוי.');
+                    return false;
+                }
+            }
+            return false;
+        }
+        return true;
     }
 
     // Get all users
@@ -435,6 +467,36 @@ class FamilyTaskManager {
         }
         
         return age;
+    }
+
+    // Helper method to compress image
+    compressImage(file, maxWidth = 200, quality = 0.7) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = () => {
+                // Calculate new dimensions
+                let { width, height } = img;
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                // Draw and compress
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                
+                console.log('📷 Image compressed from', Math.round(file.size / 1024), 'KB to', Math.round(compressedDataUrl.length * 0.75 / 1024), 'KB');
+                resolve(compressedDataUrl);
+            };
+            
+            img.src = URL.createObjectURL(file);
+        });
     }
 
     // Restore active timers from localStorage data
@@ -1028,6 +1090,20 @@ class UIManager {
             };
         }
         
+        // Show storage usage
+        const storageInfo = this.checkStorageUsage();
+        const storageDisplay = document.getElementById('storageUsage');
+        if (storageDisplay) {
+            const colorClass = storageInfo.percentage > 80 ? 'danger' : storageInfo.percentage > 60 ? 'warning' : 'success';
+            storageDisplay.innerHTML = `
+                <div class="storage-info ${colorClass}">
+                    <i class="fas fa-database"></i>
+                    שימוש באחסון: ${storageInfo.used} KB / ${storageInfo.max} KB (${storageInfo.percentage}%)
+                    ${storageInfo.percentage > 80 ? '<br><small style="color: #ff4444;">⚠️ אחסון כמעט מלא - מומלץ למחוק תמונות או לעשות גיבוי</small>' : ''}
+                </div>
+            `;
+        }
+        
         const exportDataBtn = document.getElementById('exportDataBtn');
         if (exportDataBtn) {
             exportDataBtn.onclick = () => this.exportData();
@@ -1346,15 +1422,13 @@ class UIManager {
             
             // Handle image upload
             if (avatarFile && avatarFile.size > 0) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    userData.avatar = event.target.result;
+                this.taskManager.compressImage(avatarFile).then(compressedDataUrl => {
+                    userData.avatar = compressedDataUrl;
                     this.taskManager.addUser(userData);
                     this.showMessage('המשתמש נוסף בהצלחה!', 'success');
                     this.closeModal();
                     this.render();
-                };
-                reader.readAsDataURL(avatarFile);
+                });
             } else {
                 this.taskManager.addUser(userData);
                 this.showMessage('המשתמש נוסף בהצלחה!', 'success');
@@ -1435,15 +1509,13 @@ class UIManager {
             
             // Handle image upload
             if (avatarFile && avatarFile.size > 0) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    updates.avatar = event.target.result;
+                this.taskManager.compressImage(avatarFile).then(compressedDataUrl => {
+                    updates.avatar = compressedDataUrl;
                     this.taskManager.updateUser(userId, updates);
                     this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
                     this.closeModal();
                     this.render();
-                };
-                reader.readAsDataURL(avatarFile);
+                });
             } else {
                 this.taskManager.updateUser(userId, updates);
                 this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
@@ -1467,6 +1539,23 @@ class UIManager {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         this.showMessage('הגיבוי הורד בהצלחה!', 'success');
+    }
+
+    checkStorageUsage() {
+        try {
+            const data = localStorage.getItem('familyTaskData');
+            const used = data ? data.length : 0;
+            const usedKB = Math.round(used / 1024);
+            const maxKB = 5120; // ~5MB typical localStorage limit
+            const percentage = Math.round((used / (maxKB * 1024)) * 100);
+            
+            console.log(`📊 localStorage usage: ${usedKB} KB / ${maxKB} KB (${percentage}%)`);
+            
+            return { used: usedKB, max: maxKB, percentage };
+        } catch (error) {
+            console.error('Error checking storage:', error);
+            return { used: 0, max: 5120, percentage: 0 };
+        }
     }
 
     clearAllData() {
