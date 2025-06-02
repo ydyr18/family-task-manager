@@ -1651,11 +1651,20 @@ class UIManager {
     }
 
     closeModal() {
+        console.log('🔥 closeModal called');
         const modal = document.getElementById('modal');
-        modal.style.display = 'none';
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('active');
+        }
         
-        // Only clear UI state if there's no active timer running
-        // This allows the timer to continue in background
+        // Clear modal body
+        const modalBody = document.getElementById('modalBody');
+        if (modalBody) {
+            modalBody.innerHTML = '<span class="close">&times;</span>';
+        }
+        
+        // Only clear timer state if no active timer is running
         const userId = this.taskManager.selectedUserId || this.taskManager.currentUser;
         const hasActiveTimer = userId && this.taskManager.activeTimers.has(userId);
         
@@ -1663,11 +1672,9 @@ class UIManager {
             this.taskManager.timer = null;
             this.taskManager.currentTask = null;
             this.taskManager.selectedUserId = null;
-        } else {
-            // Keep the timer state for active timers, just clear UI references
-            this.taskManager.timer = null; // UI timer reference can be cleared
-            // Keep currentTask and selectedUserId for active timers
         }
+        
+        console.log('🔥 closeModal completed');
     }
 
     showMessage(text, type = 'info') {
@@ -1704,61 +1711,76 @@ class UIManager {
 
 // Global functions for window scope
 window.showScreen = function(screenId) {
-    ui.showScreen(screenId);
+    if (ui) ui.showScreen(screenId);
 };
 
 window.showAdminTab = function(tabName) {
-    ui.showAdminTab(tabName);
+    if (ui) ui.showAdminTab(tabName);
 };
 
 window.closeModal = function() {
-    ui.closeModal();
+    if (ui) ui.closeModal();
 };
 
 window.goBackFromTask = function() {
-    ui.showScreen(ui.previousScreen);
+    if (ui) ui.showScreen(ui.previousScreen);
 };
 
 // User and Profile functions
 window.showUserProfile = function(userId) {
-    ui.showUserProfile(userId);
+    if (ui) ui.showUserProfile(userId);
 };
 
 window.showRoomTasks = function(room) {
-    ui.showRoomTasks(room);
+    if (ui) ui.showRoomTasks(room);
 };
 
 window.startTask = function(taskId) {
-    ui.startTask(taskId);
+    if (ui) ui.startTask(taskId);
 };
 
 window.startTimer = function() {
-    ui.startTimer();
+    if (ui) ui.startTimer();
 };
 
 window.stopTimer = function() {
-    ui.stopTimer();
+    if (ui) ui.stopTimer();
 };
 
-// Admin functions
+// Admin functions - ENSURE THESE ARE ALWAYS AVAILABLE
 window.editUser = function(userId) {
-    ui.editUser(userId);
+    console.log('🔥 window.editUser called with userId:', userId);
+    if (ui && ui.editUser) {
+        ui.editUser(userId);
+    } else {
+        console.error('🔥 ui or ui.editUser not available!');
+    }
 };
 
 window.editTask = function(taskId) {
-    ui.editTask(taskId);
+    console.log('🔥 window.editTask called with taskId:', taskId);
+    if (ui && ui.editTask) {
+        ui.editTask(taskId);
+    } else {
+        console.error('🔥 ui or ui.editTask not available!');
+    }
 };
 
 window.editReward = function(rewardId) {
-    ui.editReward(rewardId);
+    console.log('🔥 window.editReward called with rewardId:', rewardId);
+    if (ui && ui.editReward) {
+        ui.editReward(rewardId);
+    } else {
+        console.error('🔥 ui or ui.editReward not available!');
+    }
 };
 
 window.reactivateTask = function(taskId) {
-    ui.reactivateTask(taskId);
+    if (ui) ui.reactivateTask(taskId);
 };
 
 window.deactivateTask = function(taskId) {
-    ui.deactivateTask(taskId);
+    if (ui) ui.deactivateTask(taskId);
 };
 
 // Initialize the application
