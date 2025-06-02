@@ -455,27 +455,42 @@ class FamilyTaskManager {
 class UIManager {
     constructor(taskManager) {
         this.taskManager = taskManager;
-        this.initializeEventListeners();
+        
+        // Only initialize if not already done
+        if (!this.isInitialized) {
+            this.initializeEventListeners();
+            this.isInitialized = true;
+        }
+        
         this.render();
     }
 
     initializeEventListeners() {
         // Admin button - will be shown only for parents
-        document.getElementById('adminBtn').addEventListener('click', () => {
-            this.showScreen('adminScreen');
-        });
+        const adminBtn = document.getElementById('adminBtn');
+        if (adminBtn) {
+            adminBtn.addEventListener('click', () => {
+                this.showScreen('adminScreen');
+            });
+        }
 
-        // Modal close
-        document.querySelector('.modal .close').addEventListener('click', () => {
-            this.closeModal();
-        });
+        // Modal close - check if exists
+        const modalClose = document.querySelector('.modal-content .close');
+        if (modalClose) {
+            modalClose.addEventListener('click', () => {
+                this.closeModal();
+            });
+        }
 
         // Click outside modal to close
-        document.getElementById('modal').addEventListener('click', (e) => {
-            if (e.target.id === 'modal') {
-                this.closeModal();
-            }
-        });
+        const modal = document.getElementById('modal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target.id === 'modal') {
+                    this.closeModal();
+                }
+            });
+        }
     }
 
     render() {
@@ -1750,6 +1765,10 @@ window.deactivateTask = function(taskId) {
 let taskManager, ui;
 
 document.addEventListener('DOMContentLoaded', () => {
-    taskManager = new FamilyTaskManager();
-    ui = new UIManager(taskManager);
+    if (!taskManager) {
+        taskManager = new FamilyTaskManager();
+    }
+    if (!ui) {
+        ui = new UIManager(taskManager);
+    }
 }); 
