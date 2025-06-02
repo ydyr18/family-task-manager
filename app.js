@@ -474,11 +474,9 @@ class UIManager {
         // Store the event handler function to be able to remove it later
         this.clickHandler = this.createClickHandler();
         
-        // Only initialize if not already done
-        if (!window.uiInitialized) {
-            this.initializeEventListeners();
-            window.uiInitialized = true;
-        }
+        // Initialize event listeners ONLY ONCE
+        console.log('🔥 Initializing event listeners for the first and last time');
+        this.initializeEventListeners();
         
         this.render();
     }
@@ -614,11 +612,8 @@ class UIManager {
         const adminBtn = document.getElementById('adminBtn');
         adminBtn.style.display = 'none';
         
-        // RE-INITIALIZE EVENT LISTENERS AFTER RENDER! (CRAZY WORKAROUND)
-        console.log('🔥 Re-initializing event listeners after render');
-        this.initializeEventListeners();
-        
-        console.log('🔥 render() completed');
+        // DON'T re-initialize event listeners after render! This was causing duplicates!
+        console.log('🔥 render() completed (no event listener re-init)');
     }
 
     renderFamilyProfiles() {
