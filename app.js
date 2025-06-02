@@ -622,16 +622,19 @@ class UIManager {
     }
 
     renderFamilyProfiles() {
+        console.log('🔥 renderFamilyProfiles called');
         const container = document.getElementById('familyProfiles');
         const users = this.taskManager.getUsers();
+        console.log('🔥 Users to render:', users);
         
         container.innerHTML = users.map(user => {
+            console.log('🔥 Rendering user:', user.name, 'ID:', user.id);
             const age = this.taskManager.calculateAge(user.birthDate);
             const performingStatus = this.taskManager.getUserPerformingStatus(user.id);
             const statusClass = performingStatus.isPerforming ? 'performing-task' : '';
             const statusText = performingStatus.isPerforming ? 'בביצוע משימה' : '';
             
-            return `
+            const profileHtml = `
                 <div class="profile-card ${statusClass}" data-show-profile="${user.id}">
                     <div class="profile-avatar">
                         ${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : user.name.charAt(0)}
@@ -646,7 +649,10 @@ class UIManager {
                     </div>
                 </div>
             `;
+            console.log('🔥 Profile HTML for', user.name, ':', profileHtml);
+            return profileHtml;
         }).join('');
+        console.log('🔥 renderFamilyProfiles completed');
     }
 
     renderRooms() {
@@ -760,30 +766,45 @@ class UIManager {
     }
 
     showUserProfile(userId) {
+        console.log('🔥 showUserProfile called with userId:', userId, typeof userId);
         this.taskManager.currentUser = userId;
         const user = this.taskManager.getUser(userId);
+        console.log('🔥 User found:', user);
+        
+        if (!user) {
+            console.error('🔥 User not found for id:', userId);
+            return;
+        }
         
         // Check if user has an active task - if so, open timer directly
         const performingStatus = this.taskManager.getUserPerformingStatus(userId);
+        console.log('🔥 User performing status:', performingStatus);
         if (performingStatus.isPerforming && performingStatus.taskId) {
+            console.log('🔥 User has active task, opening timer');
             this.openActiveTaskTimer(performingStatus.taskId, userId);
             return;
         }
         
         const userTasks = this.taskManager.getUserTasks(userId);
+        console.log('🔥 User tasks:', userTasks);
         
         // Show admin button only for parents
         const adminBtn = document.getElementById('adminBtn');
+        console.log('🔥 User role:', user.role, 'Admin button:', adminBtn);
         if (user.role === 'הורה') {
+            console.log('🔥 Showing admin button for parent');
             adminBtn.style.display = 'flex';
         } else {
+            console.log('🔥 Hiding admin button for child');
             adminBtn.style.display = 'none';
         }
         
         // Update profile info
+        console.log('🔥 Updating profile title');
         document.getElementById('profileTitle').textContent = `הפרופיל של ${user.name}`;
         
         // Update profile info section
+        console.log('🔥 Updating profile info section');
         document.getElementById('profileInfo').innerHTML = `
             <div class="profile-avatar">
                 ${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : user.name.charAt(0)}
@@ -799,6 +820,7 @@ class UIManager {
         // Update stats
         const weeklyStats = this.taskManager.getWeeklyStats();
         const userStats = weeklyStats[userId] || {};
+        console.log('🔥 User stats:', userStats);
         
         document.getElementById('profileStats').innerHTML = `
             <div class="stat-card">
@@ -816,10 +838,13 @@ class UIManager {
         `;
         
         // Render user tasks
+        console.log('🔥 Rendering user tasks');
         this.renderTasks(userTasks, 'userTasksList');
         
         this.previousScreen = 'homeScreen';
+        console.log('🔥 About to show profile screen');
         this.showScreen('profileScreen');
+        console.log('🔥 showUserProfile completed');
     }
 
     openActiveTaskTimer(taskId, userId) {
