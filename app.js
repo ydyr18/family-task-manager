@@ -529,11 +529,13 @@ class ImageCropper {
     }
 
     showCropper(file, callback) {
+        console.log('🎯 ImageCropper.showCropper called with file:', file);
         this.cropCallback = callback;
         
         // Create modal
         const modal = document.createElement('div');
         modal.className = 'image-cropper-modal';
+        console.log('🎯 Created modal element');
         modal.innerHTML = `
             <div class="cropper-container">
                 <div class="cropper-header">
@@ -549,8 +551,11 @@ class ImageCropper {
                 <div class="cropper-controls">
                     <div class="cropper-zoom-container">
                         <button class="zoom-btn" id="zoomOut">−</button>
-                        <input type="range" id="zoomSlider" class="zoom-slider" min="0.5" max="3" step="0.1" value="1">
+                        <input type="range" id="zoomSlider" class="zoom-slider" min="0.3" max="2.5" step="0.1" value="1">
                         <button class="zoom-btn" id="zoomIn">+</button>
+                    </div>
+                    <div style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">
+                        גרור את התמונה • השתמש בזום
                     </div>
                 </div>
                 
@@ -564,26 +569,53 @@ class ImageCropper {
             </div>
         `;
         
+        console.log('🎯 Appending modal to document body');
         document.body.appendChild(modal);
+        
+        // Debug: Make sure modal is visible
+        modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.zIndex = '999999';
+        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+        console.log('🎯 Modal visibility forced, checking if visible...');
+        
+        // Check if modal was added
+        const addedModal = document.querySelector('.image-cropper-modal');
+        console.log('🎯 Modal found in DOM:', !!addedModal);
         
         // Initialize canvas and image
         this.canvas = document.getElementById('cropperCanvas');
         this.ctx = this.canvas.getContext('2d');
+        console.log('🎯 Canvas initialized:', !!this.canvas, !!this.ctx);
         this.loadImage(file);
         
         // Event listeners
         this.setupEventListeners(modal);
+        console.log('🎯 ImageCropper setup completed');
     }
 
     loadImage(file) {
+        console.log('🎯 Loading image file:', file.name, file.size, file.type);
         const reader = new FileReader();
         reader.onload = (e) => {
+            console.log('🎯 FileReader loaded image data');
             this.image = new Image();
             this.image.onload = () => {
+                console.log('🎯 Image loaded, dimensions:', this.image.width, 'x', this.image.height);
                 this.initializeCanvas();
                 this.drawImage();
             };
+            this.image.onerror = (error) => {
+                console.error('🎯 Image load error:', error);
+            };
             this.image.src = e.target.result;
+        };
+        reader.onerror = (error) => {
+            console.error('🎯 FileReader error:', error);
         };
         reader.readAsDataURL(file);
     }
@@ -711,6 +743,12 @@ class ImageCropper {
 
         zoomOut.addEventListener('click', () => {
             this.scale = Math.max(0.5, this.scale - 0.1);
+            zoomSlider.value = this.scale;
+            this.drawImage();
+        });
+
+        zoomReset.addEventListener('click', () => {
+            this.scale = 1;
             zoomSlider.value = this.scale;
             this.drawImage();
         });
@@ -1695,18 +1733,34 @@ class UIManager {
             
             // Handle image upload
             if (avatarFile && avatarFile.size > 0) {
+                console.log('🔥 Starting image cropper...');
+                // Close current modal first
+                this.closeModal();
+                
                 // Use image cropper
                 const cropper = new ImageCropper();
                 cropper.showCropper(avatarFile, (croppedDataUrl) => {
+                    console.log('🔥 Cropped image received, size:', croppedDataUrl.length);
                     userData.avatar = croppedDataUrl;
+                    
+                    // Clear the file input to prevent infinite loop
+                    const fileInput = document.querySelector('input[name="avatar"]');
+                    if (fileInput) {
+                        fileInput.value = '';
+                        console.log('🔥 File input cleared');
+                    }
+                    
                     this.taskManager.addUser(userData);
                     this.showMessage('המשתמש נוסף בהצלחה!', 'success');
-                    this.closeModal();
+                    
+                    // Go back to home screen directly
+                    this.showScreen('homeScreen');
                     this.render();
                 });
             } else {
-                this.taskManager.addUser(userData);
-                this.showMessage('המשתמש נוסף בהצלחה!', 'success');
+                console.log('🔥 No avatar file, updating without image');
+                this.taskManager.updateUser(userId, updates);
+                this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
                 this.closeModal();
                 this.render();
             }
@@ -1776,6 +1830,10 @@ class UIManager {
             const formData = new FormData(e.target);
             const avatarFile = formData.get('avatar');
             
+            console.log('🔥 Avatar file:', avatarFile);
+            console.log('🔥 Avatar file size:', avatarFile ? avatarFile.size : 'no file');
+            console.log('🔥 Avatar file type:', avatarFile ? avatarFile.type : 'no file');
+            
             const updates = {
                 name: formData.get('name'),
                 birthDate: formData.get('birthDate'),
@@ -1784,16 +1842,29 @@ class UIManager {
             
             // Handle image upload
             if (avatarFile && avatarFile.size > 0) {
+                console.log('🔥 Starting image cropper...');
                 // Use image cropper
                 const cropper = new ImageCropper();
                 cropper.showCropper(avatarFile, (croppedDataUrl) => {
+                    console.log('🔥 Cropped image received, size:', croppedDataUrl.length);
                     updates.avatar = croppedDataUrl;
+                    
+                    // Clear the file input to prevent infinite loop
+                    const fileInput = document.querySelector('input[name="avatar"]');
+                    if (fileInput) {
+                        fileInput.value = '';
+                        console.log('🔥 File input cleared');
+                    }
+                    
                     this.taskManager.updateUser(userId, updates);
                     this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
-                    this.closeModal();
+                    
+                    // Go back to home screen directly
+                    this.showScreen('homeScreen');
                     this.render();
                 });
             } else {
+                console.log('🔥 No avatar file, updating without image');
                 this.taskManager.updateUser(userId, updates);
                 this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
                 this.closeModal();
