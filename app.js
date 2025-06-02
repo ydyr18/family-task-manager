@@ -13,6 +13,12 @@ class FamilyTaskManager {
         this.previousScreen = 'homeScreen';
         this.activeTimers = new Map();
         
+        // Check storage usage
+        const storageInfo = this.getStorageInfo();
+        if (storageInfo && storageInfo.usagePercent > 80) {
+            console.warn('🔥 WARNING: Storage usage is high!', storageInfo.usagePercent + '%');
+        }
+        
         // Restore any active timers from localStorage
         this.restoreActiveTimers();
     }
@@ -180,8 +186,34 @@ class FamilyTaskManager {
 
     // Save data to localStorage
     saveData(data = this.data) {
-        localStorage.setItem('familyTaskData', JSON.stringify(data));
-        this.data = data;
+        try {
+            const dataString = JSON.stringify(data);
+            console.log('🔥 Attempting to save data, size:', Math.round(dataString.length / 1024), 'KB');
+            localStorage.setItem('familyTaskData', dataString);
+            this.data = data;
+            console.log('🔥 Data saved successfully');
+        } catch (error) {
+            console.error('🔥 Error saving data:', error);
+            if (error.name === 'QuotaExceededError') {
+                alert('אחסון מלא! התמונות גדולות מדי. נסה להקטין את התמונות או מחק תמונות ישנות.');
+                // Try to save without avatars as fallback
+                const dataWithoutAvatars = JSON.parse(JSON.stringify(data));
+                dataWithoutAvatars.users.forEach(user => {
+                    if (user.avatar) {
+                        console.log('🔥 Removing avatar for user:', user.name);
+                        user.avatar = null;
+                    }
+                });
+                try {
+                    localStorage.setItem('familyTaskData', JSON.stringify(dataWithoutAvatars));
+                    this.data = dataWithoutAvatars;
+                    alert('הנתונים נשמרו ללא התמונות כדי לחסוך מקום.');
+                } catch (fallbackError) {
+                    console.error('🔥 Even fallback save failed:', fallbackError);
+                    alert('שגיאה קריטית בשמירת הנתונים. נסה לרענן את הדף.');
+                }
+            }
+        }
     }
 
     // Get all users
@@ -450,6 +482,69 @@ class FamilyTaskManager {
                 });
             }
         });
+    }
+
+    // Helper method to compress image
+    compressImage(file, maxWidth = 150, quality = 0.8) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = () => {
+                // Calculate new dimensions
+                let { width, height } = img;
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                // Draw and compress
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                
+                console.log('🔥 Image compressed from', Math.round(file.size / 1024), 'KB to', Math.round(compressedDataUrl.length * 0.75 / 1024), 'KB');
+                resolve(compressedDataUrl);
+            };
+            
+            img.src = URL.createObjectURL(file);
+        });
+    }
+
+    // Check localStorage usage
+    getStorageInfo() {
+        try {
+            const data = localStorage.getItem('familyTaskData');
+            const sizeInBytes = data ? data.length : 0;
+            const sizeInKB = Math.round(sizeInBytes / 1024);
+            const sizeInMB = Math.round(sizeInKB / 1024 * 100) / 100;
+            
+            // Estimate localStorage limit (usually 5-10MB)
+            const estimatedLimit = 5 * 1024; // 5MB in KB
+            const usagePercent = Math.round(sizeInKB / estimatedLimit * 100);
+            
+            console.log('🔥 Storage info:', {
+                sizeInBytes,
+                sizeInKB,
+                sizeInMB,
+                usagePercent: `${usagePercent}%`,
+                estimatedLimit: `${estimatedLimit}KB`
+            });
+            
+            return {
+                sizeInBytes,
+                sizeInKB,
+                sizeInMB,
+                usagePercent,
+                estimatedLimit
+            };
+        } catch (error) {
+            console.error('🔥 Error getting storage info:', error);
+            return null;
+        }
     }
 }
 
@@ -1483,18 +1578,34 @@ class UIManager {
             
             // Handle image upload
             if (avatarFile && avatarFile.size > 0) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    userData.avatar = event.target.result;
-                    this.taskManager.addUser(userData);
-                    this.showMessage('המשתמש נוסף בהצלחה!', 'success');
-                    this.closeModal();
-                    this.render();
-                };
-                reader.readAsDataURL(avatarFile);
+                console.log('🔥 Processing image file, size:', Math.round(avatarFile.size / 1024), 'KB');
+                
+                // Check file size - if too big, compress
+                if (avatarFile.size > 500000) { // 500KB
+                    console.log('🔥 Image is large, compressing...');
+                    this.taskManager.compressImage(avatarFile).then((compressedDataUrl) => {
+                        userData.avatar = compressedDataUrl;
+                        this.taskManager.addUser(userData);
+                        this.showMessage('המשתמש נוסף בהצלחה!', 'success');
+                        this.closeModal();
+                        this.render();
+                    });
+                } else {
+                    console.log('🔥 Image is small enough, using as-is');
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        userData.avatar = event.target.result;
+                        this.taskManager.addUser(userData);
+                        this.showMessage('המשתמש נוסף בהצלחה!', 'success');
+                        this.closeModal();
+                        this.render();
+                    };
+                    reader.readAsDataURL(avatarFile);
+                }
             } else {
+                console.log('🔥 Updating user without avatar');
                 this.taskManager.addUser(userData);
-                this.showMessage('המשתמש נוסף בהצלחה!', 'success');
+                this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
                 this.closeModal();
                 this.render();
             }
@@ -1575,17 +1686,34 @@ class UIManager {
             
             // Handle image upload
             if (avatarFile && avatarFile.size > 0) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    updates.avatar = event.target.result;
-                    console.log('🔥 Updating user with avatar');
-                    this.taskManager.updateUser(userId, updates);
-                    this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
-                    this.closeModal();
-                    console.log('🔥 About to render after user update');
-                    this.render();
-                };
-                reader.readAsDataURL(avatarFile);
+                console.log('🔥 Processing image file, size:', Math.round(avatarFile.size / 1024), 'KB');
+                
+                // Check file size - if too big, compress
+                if (avatarFile.size > 500000) { // 500KB
+                    console.log('🔥 Image is large, compressing...');
+                    this.taskManager.compressImage(avatarFile).then((compressedDataUrl) => {
+                        updates.avatar = compressedDataUrl;
+                        console.log('🔥 Updating user with compressed avatar');
+                        this.taskManager.updateUser(userId, updates);
+                        this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
+                        this.closeModal();
+                        console.log('🔥 About to render after user update');
+                        this.render();
+                    });
+                } else {
+                    console.log('🔥 Image is small enough, using as-is');
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        updates.avatar = event.target.result;
+                        console.log('🔥 Updating user with avatar');
+                        this.taskManager.updateUser(userId, updates);
+                        this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
+                        this.closeModal();
+                        console.log('🔥 About to render after user update');
+                        this.render();
+                    };
+                    reader.readAsDataURL(avatarFile);
+                }
             } else {
                 console.log('🔥 Updating user without avatar');
                 this.taskManager.updateUser(userId, updates);
