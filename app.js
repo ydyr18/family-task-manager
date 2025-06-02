@@ -604,7 +604,7 @@ class UIManager {
     }
 
     render() {
-        console.log('🔥 render() called');
+        console.log('🔥 render() called - STACK TRACE:', new Error().stack.split('\n').slice(1, 4));
         this.renderFamilyProfiles();
         this.renderRooms();
         this.renderRewards();
@@ -1516,6 +1516,7 @@ class UIManager {
         
         console.log('🔥 User found:', user);
         
+        console.log('🔥 Creating modal content for user:', user.name);
         const modalContent = `
             <h3>עריכת משתמש</h3>
             <form id="editUserForm">
@@ -1552,9 +1553,18 @@ class UIManager {
             </form>
         `;
         
+        console.log('🔥 Modal content created, calling showModal');
         this.showModal(modalContent);
+        console.log('🔥 showModal called, setting up form submit handler');
         
-        document.getElementById('editUserForm').onsubmit = (e) => {
+        const editUserForm = document.getElementById('editUserForm');
+        console.log('🔥 editUserForm element:', editUserForm);
+        if (!editUserForm) {
+            console.error('🔥 editUserForm not found after showModal!');
+            return;
+        }
+        
+        editUserForm.onsubmit = (e) => {
             console.log('🔥 editUserForm onsubmit triggered');
             e.preventDefault();
             const formData = new FormData(e.target);
@@ -1801,8 +1811,26 @@ class UIManager {
     }
 
     showModal(content) {
-        document.getElementById('modalBody').innerHTML = content;
-        document.getElementById('modal').classList.add('active');
+        console.log('🔥 showModal called with content length:', content.length);
+        console.log('🔥 Modal content preview:', content.substring(0, 100));
+        const modalBody = document.getElementById('modalBody');
+        console.log('🔥 modalBody element:', modalBody);
+        if (!modalBody) {
+            console.error('🔥 modalBody element not found!');
+            return;
+        }
+        modalBody.innerHTML = content;
+        console.log('🔥 modalBody content set');
+        
+        const modal = document.getElementById('modal');
+        console.log('🔥 modal element:', modal);
+        if (!modal) {
+            console.error('🔥 modal element not found!');
+            return;
+        }
+        modal.classList.add('active');
+        console.log('🔥 modal active class added');
+        console.log('🔥 showModal completed successfully');
     }
 
     closeModal() {
