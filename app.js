@@ -513,6 +513,279 @@ class FamilyTaskManager {
     }
 }
 
+// Image Cropper Class
+class ImageCropper {
+    constructor() {
+        this.image = null;
+        this.canvas = null;
+        this.ctx = null;
+        this.scale = 1;
+        this.offsetX = 0;
+        this.offsetY = 0;
+        this.isDragging = false;
+        this.lastX = 0;
+        this.lastY = 0;
+        this.cropCallback = null;
+    }
+
+    showCropper(file, callback) {
+        this.cropCallback = callback;
+        
+        // Create modal
+        const modal = document.createElement('div');
+        modal.className = 'image-cropper-modal';
+        modal.innerHTML = `
+            <div class="cropper-container">
+                <div class="cropper-header">
+                    <h3>🎯 חיתוך תמונת פרופיל</h3>
+                    <p>גרור את התמונה ושנה את הזום לבחירת האזור המושלם</p>
+                </div>
+                
+                <div class="cropper-canvas-container" id="cropperCanvasContainer">
+                    <canvas id="cropperCanvas" class="cropper-canvas"></canvas>
+                    <div class="cropper-overlay"></div>
+                </div>
+                
+                <div class="cropper-controls">
+                    <div class="cropper-zoom-container">
+                        <button class="zoom-btn" id="zoomOut">−</button>
+                        <input type="range" id="zoomSlider" class="zoom-slider" min="0.5" max="3" step="0.1" value="1">
+                        <button class="zoom-btn" id="zoomIn">+</button>
+                    </div>
+                </div>
+                
+                <div class="cropper-actions">
+                    <button class="cancel-crop-btn" id="cancelCrop">ביטול</button>
+                    <button class="crop-btn" id="confirmCrop">
+                        <i class="fas fa-crop"></i>
+                        שמור תמונה
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Initialize canvas and image
+        this.canvas = document.getElementById('cropperCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.loadImage(file);
+        
+        // Event listeners
+        this.setupEventListeners(modal);
+    }
+
+    loadImage(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this.image = new Image();
+            this.image.onload = () => {
+                this.initializeCanvas();
+                this.drawImage();
+            };
+            this.image.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    initializeCanvas() {
+        const containerSize = 300;
+        this.canvas.width = containerSize;
+        this.canvas.height = containerSize;
+        
+        // Calculate initial scale to fit image
+        const imageAspect = this.image.width / this.image.height;
+        if (imageAspect > 1) {
+            // Landscape
+            this.scale = containerSize / this.image.height;
+        } else {
+            // Portrait or square
+            this.scale = containerSize / this.image.width;
+        }
+        
+        // Center the image
+        this.offsetX = 0;
+        this.offsetY = 0;
+        
+        document.getElementById('zoomSlider').value = this.scale;
+    }
+
+    drawImage() {
+        if (!this.image || !this.ctx) return;
+        
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Calculate scaled dimensions
+        const scaledWidth = this.image.width * this.scale;
+        const scaledHeight = this.image.height * this.scale;
+        
+        // Calculate position (centered + offset)
+        const x = (this.canvas.width - scaledWidth) / 2 + this.offsetX;
+        const y = (this.canvas.height - scaledHeight) / 2 + this.offsetY;
+        
+        // Draw image
+        this.ctx.drawImage(this.image, x, y, scaledWidth, scaledHeight);
+    }
+
+    setupEventListeners(modal) {
+        const container = document.getElementById('cropperCanvasContainer');
+        const zoomSlider = document.getElementById('zoomSlider');
+        const zoomIn = document.getElementById('zoomIn');
+        const zoomOut = document.getElementById('zoomOut');
+        const confirmCrop = document.getElementById('confirmCrop');
+        const cancelCrop = document.getElementById('cancelCrop');
+
+        // Mouse events for dragging
+        container.addEventListener('mousedown', (e) => {
+            this.isDragging = true;
+            this.lastX = e.clientX;
+            this.lastY = e.clientY;
+            container.style.cursor = 'grabbing';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (this.isDragging) {
+                const deltaX = e.clientX - this.lastX;
+                const deltaY = e.clientY - this.lastY;
+                
+                this.offsetX += deltaX;
+                this.offsetY += deltaY;
+                
+                this.lastX = e.clientX;
+                this.lastY = e.clientY;
+                
+                this.drawImage();
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (this.isDragging) {
+                this.isDragging = false;
+                container.style.cursor = 'move';
+            }
+        });
+
+        // Touch events for mobile
+        container.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            this.isDragging = true;
+            this.lastX = touch.clientX;
+            this.lastY = touch.clientY;
+        });
+
+        container.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (this.isDragging && e.touches.length === 1) {
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - this.lastX;
+                const deltaY = touch.clientY - this.lastY;
+                
+                this.offsetX += deltaX;
+                this.offsetY += deltaY;
+                
+                this.lastX = touch.clientX;
+                this.lastY = touch.clientY;
+                
+                this.drawImage();
+            }
+        });
+
+        container.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.isDragging = false;
+        });
+
+        // Zoom controls
+        zoomSlider.addEventListener('input', (e) => {
+            this.scale = parseFloat(e.target.value);
+            this.drawImage();
+        });
+
+        zoomIn.addEventListener('click', () => {
+            this.scale = Math.min(3, this.scale + 0.1);
+            zoomSlider.value = this.scale;
+            this.drawImage();
+        });
+
+        zoomOut.addEventListener('click', () => {
+            this.scale = Math.max(0.5, this.scale - 0.1);
+            zoomSlider.value = this.scale;
+            this.drawImage();
+        });
+
+        // Action buttons
+        confirmCrop.addEventListener('click', () => {
+            const croppedDataUrl = this.getCroppedImage();
+            this.closeCropper(modal);
+            if (this.cropCallback) {
+                this.cropCallback(croppedDataUrl);
+            }
+        });
+
+        cancelCrop.addEventListener('click', () => {
+            this.closeCropper(modal);
+        });
+
+        // Close on overlay click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                this.closeCropper(modal);
+            }
+        });
+    }
+
+    getCroppedImage() {
+        // Create a new canvas for the cropped result
+        const resultCanvas = document.createElement('canvas');
+        const resultCtx = resultCanvas.getContext('2d');
+        
+        // Set canvas size to desired output (200x200 for circular avatar)
+        const outputSize = 200;
+        resultCanvas.width = outputSize;
+        resultCanvas.height = outputSize;
+        
+        // Calculate the crop area from the current view
+        const sourceSize = 300; // Original canvas size
+        const scaledWidth = this.image.width * this.scale;
+        const scaledHeight = this.image.height * this.scale;
+        
+        // Calculate the source rectangle on the original image
+        const centerX = (this.canvas.width - scaledWidth) / 2 + this.offsetX;
+        const centerY = (this.canvas.height - scaledHeight) / 2 + this.offsetY;
+        
+        // Calculate crop area in original image coordinates
+        const cropSize = sourceSize; // Use full canvas as crop area
+        const cropX = (-centerX) / this.scale;
+        const cropY = (-centerY) / this.scale;
+        const cropWidth = cropSize / this.scale;
+        const cropHeight = cropSize / this.scale;
+        
+        // Create circular clip
+        resultCtx.beginPath();
+        resultCtx.arc(outputSize / 2, outputSize / 2, outputSize / 2, 0, Math.PI * 2);
+        resultCtx.clip();
+        
+        // Draw the cropped image
+        resultCtx.drawImage(
+            this.image,
+            cropX, cropY, cropWidth, cropHeight,
+            0, 0, outputSize, outputSize
+        );
+        
+        return resultCanvas.toDataURL('image/jpeg', 0.8);
+    }
+
+    closeCropper(modal) {
+        document.body.removeChild(modal);
+        this.image = null;
+        this.canvas = null;
+        this.ctx = null;
+        this.cropCallback = null;
+    }
+}
+
 // UI Manager Class
 class UIManager {
     constructor(taskManager) {
@@ -1422,8 +1695,10 @@ class UIManager {
             
             // Handle image upload
             if (avatarFile && avatarFile.size > 0) {
-                this.taskManager.compressImage(avatarFile).then(compressedDataUrl => {
-                    userData.avatar = compressedDataUrl;
+                // Use image cropper
+                const cropper = new ImageCropper();
+                cropper.showCropper(avatarFile, (croppedDataUrl) => {
+                    userData.avatar = croppedDataUrl;
                     this.taskManager.addUser(userData);
                     this.showMessage('המשתמש נוסף בהצלחה!', 'success');
                     this.closeModal();
@@ -1509,8 +1784,10 @@ class UIManager {
             
             // Handle image upload
             if (avatarFile && avatarFile.size > 0) {
-                this.taskManager.compressImage(avatarFile).then(compressedDataUrl => {
-                    updates.avatar = compressedDataUrl;
+                // Use image cropper
+                const cropper = new ImageCropper();
+                cropper.showCropper(avatarFile, (croppedDataUrl) => {
+                    updates.avatar = croppedDataUrl;
                     this.taskManager.updateUser(userId, updates);
                     this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
                     this.closeModal();
