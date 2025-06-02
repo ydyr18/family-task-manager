@@ -456,133 +456,135 @@ class UIManager {
     constructor(taskManager) {
         this.taskManager = taskManager;
         
+        // Store bound methods to prevent context issues
+        this.boundEditUser = this.editUser.bind(this);
+        this.boundEditTask = this.editTask.bind(this);
+        this.boundEditReward = this.editReward.bind(this);
+        this.boundReactivateTask = this.reactivateTask.bind(this);
+        this.boundDeactivateTask = this.deactivateTask.bind(this);
+        this.boundShowUserProfile = this.showUserProfile.bind(this);
+        this.boundShowRoomTasks = this.showRoomTasks.bind(this);
+        this.boundStartTask = this.startTask.bind(this);
+        this.boundStartTimer = this.startTimer.bind(this);
+        this.boundStopTimer = this.stopTimer.bind(this);
+        this.boundCloseModal = this.closeModal.bind(this);
+        
+        // Store the event handler function to be able to remove it later
+        this.clickHandler = this.createClickHandler();
+        
         // Only initialize if not already done
-        if (!this.isInitialized) {
+        if (!window.uiInitialized) {
             this.initializeEventListeners();
-            this.isInitialized = true;
+            window.uiInitialized = true;
         }
         
         this.render();
     }
 
-    initializeEventListeners() {
-        // Admin button - will be shown only for parents
-        const adminBtn = document.getElementById('adminBtn');
-        if (adminBtn) {
-            adminBtn.addEventListener('click', () => {
-                this.showScreen('adminScreen');
-            });
-        }
-
-        // Modal close - check if exists
-        const modalClose = document.querySelector('.modal-content .close');
-        if (modalClose) {
-            modalClose.addEventListener('click', () => {
-                this.closeModal();
-            });
-        }
-
-        // Click outside modal to close
-        const modal = document.getElementById('modal');
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target.id === 'modal') {
-                    this.closeModal();
-                }
-            });
-        }
-
-        // Event delegation for all dynamic buttons - this solves the re-render problem!
-        document.addEventListener('click', (e) => {
+    createClickHandler() {
+        return (e) => {
+            console.log('🔥 Click detected on:', e.target, 'Closest button:', e.target.closest('button'));
             const target = e.target.closest('button') || e.target.closest('[data-action]') || e.target;
             
             // Handle edit user buttons
             if (target.hasAttribute('data-edit-user')) {
+                console.log('🔥 Edit user clicked!', target.getAttribute('data-edit-user'));
                 e.preventDefault();
                 const userId = parseInt(target.getAttribute('data-edit-user'));
-                this.editUser(userId);
+                this.boundEditUser(userId);
                 return;
             }
             
             // Handle edit task buttons
             if (target.hasAttribute('data-edit-task')) {
+                console.log('🔥 Edit task clicked!', target.getAttribute('data-edit-task'));
                 e.preventDefault();
                 const taskId = parseInt(target.getAttribute('data-edit-task'));
-                this.editTask(taskId);
+                this.boundEditTask(taskId);
                 return;
             }
             
             // Handle edit reward buttons
             if (target.hasAttribute('data-edit-reward')) {
+                console.log('🔥 Edit reward clicked!', target.getAttribute('data-edit-reward'));
                 e.preventDefault();
                 const rewardId = parseInt(target.getAttribute('data-edit-reward'));
-                this.editReward(rewardId);
+                this.boundEditReward(rewardId);
                 return;
             }
             
             // Handle reactivate task
             if (target.hasAttribute('data-reactivate-task')) {
+                console.log('🔥 Reactivate task clicked!', target.getAttribute('data-reactivate-task'));
                 e.preventDefault();
                 const taskId = parseInt(target.getAttribute('data-reactivate-task'));
-                this.reactivateTask(taskId);
+                this.boundReactivateTask(taskId);
                 return;
             }
             
             // Handle deactivate task
             if (target.hasAttribute('data-deactivate-task')) {
+                console.log('🔥 Deactivate task clicked!', target.getAttribute('data-deactivate-task'));
                 e.preventDefault();
                 const taskId = parseInt(target.getAttribute('data-deactivate-task'));
-                this.deactivateTask(taskId);
+                this.boundDeactivateTask(taskId);
                 return;
             }
             
             // Handle profile cards
             if (target.hasAttribute('data-show-profile')) {
+                console.log('🔥 Show profile clicked!', target.getAttribute('data-show-profile'));
                 e.preventDefault();
                 const userId = parseInt(target.getAttribute('data-show-profile'));
-                this.showUserProfile(userId);
+                this.boundShowUserProfile(userId);
                 return;
             }
             
             // Handle room cards
             if (target.hasAttribute('data-show-room')) {
+                console.log('🔥 Show room clicked!', target.getAttribute('data-show-room'));
                 e.preventDefault();
                 const room = target.getAttribute('data-show-room');
-                this.showRoomTasks(room);
+                this.boundShowRoomTasks(room);
                 return;
             }
             
             // Handle task cards
             if (target.hasAttribute('data-start-task')) {
+                console.log('🔥 Start task clicked!', target.getAttribute('data-start-task'));
                 e.preventDefault();
                 const taskId = parseInt(target.getAttribute('data-start-task'));
-                this.startTask(taskId);
+                this.boundStartTask(taskId);
                 return;
             }
             
             // Handle timer buttons
             if (target.hasAttribute('data-start-timer')) {
+                console.log('🔥 Start timer clicked!');
                 e.preventDefault();
-                this.startTimer();
+                this.boundStartTimer();
                 return;
             }
             
             if (target.hasAttribute('data-stop-timer')) {
+                console.log('🔥 Stop timer clicked!');
                 e.preventDefault();
-                this.stopTimer();
+                this.boundStopTimer();
                 return;
             }
             
             // Handle modal close
             if (target.hasAttribute('data-close-modal')) {
+                console.log('🔥 Close modal clicked!');
                 e.preventDefault();
-                this.closeModal();
+                this.boundCloseModal();
                 return;
             }
-        });
+        };
     }
 
     render() {
+        console.log('🔥 render() called');
         this.renderFamilyProfiles();
         this.renderRooms();
         this.renderRewards();
@@ -591,6 +593,12 @@ class UIManager {
         // Hide admin button initially when on home screen
         const adminBtn = document.getElementById('adminBtn');
         adminBtn.style.display = 'none';
+        
+        // RE-INITIALIZE EVENT LISTENERS AFTER RENDER! (CRAZY WORKAROUND)
+        console.log('🔥 Re-initializing event listeners after render');
+        this.initializeEventListeners();
+        
+        console.log('🔥 render() completed');
     }
 
     renderFamilyProfiles() {
@@ -1454,8 +1462,14 @@ class UIManager {
     }
 
     editUser(userId) {
+        console.log('🔥 editUser called with userId:', userId);
         const user = this.taskManager.getUser(userId);
-        if (!user) return;
+        if (!user) {
+            console.error('🔥 User not found:', userId);
+            return;
+        }
+        
+        console.log('🔥 User found:', user);
         
         const modalContent = `
             <h3>עריכת משתמש</h3>
@@ -1496,6 +1510,7 @@ class UIManager {
         this.showModal(modalContent);
         
         document.getElementById('editUserForm').onsubmit = (e) => {
+            console.log('🔥 editUserForm onsubmit triggered');
             e.preventDefault();
             const formData = new FormData(e.target);
             const avatarFile = formData.get('avatar');
@@ -1506,21 +1521,27 @@ class UIManager {
                 role: formData.get('role')
             };
             
+            console.log('🔥 About to update user with:', updates);
+            
             // Handle image upload
             if (avatarFile && avatarFile.size > 0) {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     updates.avatar = event.target.result;
+                    console.log('🔥 Updating user with avatar');
                     this.taskManager.updateUser(userId, updates);
                     this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
                     this.closeModal();
+                    console.log('🔥 About to render after user update');
                     this.render();
                 };
                 reader.readAsDataURL(avatarFile);
             } else {
+                console.log('🔥 Updating user without avatar');
                 this.taskManager.updateUser(userId, updates);
                 this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
                 this.closeModal();
+                console.log('🔥 About to render after user update');
                 this.render();
             }
         };
@@ -1788,6 +1809,43 @@ class UIManager {
         
         // Add active class to selected tab button
         event.target.classList.add('active');
+    }
+
+    initializeEventListeners() {
+        // Remove existing event listener if it exists
+        if (this.clickHandler) {
+            document.removeEventListener('click', this.clickHandler);
+        }
+        
+        // Admin button - will be shown only for parents
+        const adminBtn = document.getElementById('adminBtn');
+        if (adminBtn) {
+            adminBtn.addEventListener('click', () => {
+                this.showScreen('adminScreen');
+            });
+        }
+
+        // Modal close - check if exists
+        const modalClose = document.querySelector('.modal-content .close');
+        if (modalClose) {
+            modalClose.addEventListener('click', () => {
+                this.closeModal();
+            });
+        }
+
+        // Click outside modal to close
+        const modal = document.getElementById('modal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target.id === 'modal') {
+                    this.closeModal();
+                }
+            });
+        }
+
+        // Add the main click handler
+        document.addEventListener('click', this.clickHandler);
+        console.log('🔥 Event listeners initialized/re-initialized');
     }
 }
 
