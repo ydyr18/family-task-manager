@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הבית שלנו</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <h1 class="logo">
+                <i class="fas fa-home"></i>
+                הבית שלנו
+            </h1>
+            <div class="header-actions">
+                <button id="adminBtn" class="admin-btn" style="display: none;">
+                    <i class="fas fa-cog"></i>
+                    ניהול
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Home Screen - Family Profiles -->
+        <section id="homeScreen" class="screen active">
+            <div class="screen-header">
+                <h2>בחר את הפרופיל שלך</h2>
+                <p>לחץ על התמונה שלך כדי להתחיל</p>
+            </div>
+            <div id="familyProfiles" class="family-profiles">
+                <!-- Profiles will be populated by JavaScript -->
+            </div>
+            <div class="rooms-section">
+                <h3>או בחר חדר</h3>
+                <div id="roomsGrid" class="rooms-grid">
+                    <!-- Rooms will be populated by JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- User Profile Screen -->
+        <section id="profileScreen" class="screen">
+            <div class="screen-header">
+                <button class="back-btn" onclick="showScreen('homeScreen')">
+                    <i class="fas fa-arrow-right"></i>
+                    חזרה
+                </button>
+                <h2 id="profileTitle">הפרופיל שלי</h2>
+            </div>
+            <div class="profile-content">
+                <div id="profileInfo" class="profile-info">
+                    <!-- Profile info will be populated by JavaScript -->
+                </div>
+                <div id="profileStats" class="profile-stats">
+                    <!-- Stats will be populated by JavaScript -->
+                </div>
+                <div id="userTasks" class="tasks-section">
+                    <h3>המשימות שלי</h3>
+                    <div id="userTasksList" class="tasks-list">
+                        <!-- Tasks will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Room Tasks Screen -->
+        <section id="roomScreen" class="screen">
+            <div class="screen-header">
+                <button class="back-btn" onclick="showScreen('homeScreen')">
+                    <i class="fas fa-arrow-right"></i>
+                    חזרה
+                </button>
+                <h2 id="roomTitle">משימות בחדר</h2>
+            </div>
+            <div id="roomTasksList" class="tasks-list">
+                <!-- Room tasks will be populated by JavaScript -->
+            </div>
+        </section>
+
+        <!-- Task Completion Screen -->
+        <section id="taskCompletionScreen" class="screen">
+            <div class="screen-header">
+                <button class="back-btn" onclick="goBackFromTask()">
+                    <i class="fas fa-arrow-right"></i>
+                    חזרה
+                </button>
+                <h2>סיום משימה</h2>
+            </div>
+            <div id="taskCompletionForm" class="task-completion-form">
+                <!-- Task completion form will be populated by JavaScript -->
+            </div>
+        </section>
+
+        <!-- Rewards Store Screen -->
+        <section id="rewardsScreen" class="screen">
+            <div class="screen-header">
+                <button class="back-btn" onclick="showScreen('homeScreen')">
+                    <i class="fas fa-arrow-right"></i>
+                    חזרה
+                </button>
+                <h2>חנות הפרסים</h2>
+            </div>
+            <div id="rewardsList" class="rewards-list">
+                <!-- Rewards will be populated by JavaScript -->
+            </div>
+        </section>
+
+        <!-- Admin Panel Screen -->
+        <section id="adminScreen" class="screen">
+            <div class="screen-header">
+                <button class="back-btn" onclick="showScreen('homeScreen')">
+                    <i class="fas fa-arrow-right"></i>
+                    חזרה
+                </button>
+                <h2>פאנל ניהול</h2>
+            </div>
+            <div class="admin-content">
+                <div class="admin-tabs">
+                    <button class="admin-tab active" onclick="showAdminTab('tasks')">ניהול משימות</button>
+                    <button class="admin-tab" onclick="showAdminTab('rewards')">ניהול פרסים</button>
+                    <button class="admin-tab" onclick="showAdminTab('users')">ניהול משתמשים</button>
+                    <button class="admin-tab" onclick="showAdminTab('stats')">סטטיסטיקות</button>
+                    <button class="admin-tab" onclick="showAdminTab('settings')">הגדרות</button>
+                </div>
+                
+                <div id="adminTasksTab" class="admin-tab-content active">
+                    <div class="admin-section-header">
+                        <h3>ניהול משימות</h3>
+                        <button id="addTaskBtn" class="add-btn">
+                            <i class="fas fa-plus"></i>
+                            הוסף משימה חדשה
+                        </button>
+                    </div>
+                    <div id="adminTasksList" class="admin-tasks-list">
+                        <!-- Admin tasks list will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <div id="adminRewardsTab" class="admin-tab-content">
+                    <div class="admin-section-header">
+                        <h3>ניהול פרסים</h3>
+                        <button id="addRewardBtn" class="add-btn">
+                            <i class="fas fa-plus"></i>
+                            הוסף פרס חדש
+                        </button>
+                    </div>
+                    <div id="adminRewardsList" class="admin-rewards-list">
+                        <!-- Admin rewards list will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <div id="adminStatsTab" class="admin-tab-content">
+                    <h3>סטטיסטיקות שבועיות</h3>
+                    <div id="weeklyStats" class="weekly-stats">
+                        <!-- Weekly stats will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <div id="adminUsersTab" class="admin-tab-content">
+                    <div class="admin-section-header">
+                        <h3>ניהול משתמשים</h3>
+                        <button id="addUserBtn" class="add-btn">
+                            <i class="fas fa-plus"></i>
+                            הוסף משתמש חדש
+                        </button>
+                    </div>
+                    <div id="adminUsersList" class="admin-users-list">
+                        <!-- Admin users list will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <div id="adminSettingsTab" class="admin-tab-content">
+                    <h3>הגדרות מערכת</h3>
+                    <div class="settings-section">
+                        <div class="setting-item">
+                            <h4>איפוס נתונים שבועי</h4>
+                            <p>מאפס את כל הנקודות והסטטיסטיקות השבועיות של כל המשתמשים</p>
+                            <button id="weeklyResetBtn" class="weekly-reset-btn">
+                                <i class="fas fa-refresh"></i>
+                                איפוס שבועי
+                            </button>
+                        </div>
+                        <div class="setting-item">
+                            <h4>גיבוי נתונים</h4>
+                            <p>הורד קובץ גיבוי של כל הנתונים</p>
+                            <button id="exportDataBtn" class="btn-secondary">
+                                <i class="fas fa-download"></i>
+                                הורד גיבוי
+                            </button>
+                        </div>
+                        <div class="setting-item">
+                            <h4>ייבוא נתונים</h4>
+                            <p>טען נתונים מקובץ גיבוי (יחליף את הנתונים הנוכחיים)</p>
+                            <input type="file" id="importFileInput" accept=".json" style="display: none;">
+                            <button id="importDataBtn" class="btn-primary">
+                                <i class="fas fa-upload"></i>
+                                ייבא נתונים
+                            </button>
+                        </div>
+                        <div class="setting-item">
+                            <h4>מחיקת כל הנתונים</h4>
+                            <p>מחיקה מלאה של כל הנתונים - פעולה בלתי הפיכה!</p>
+                            <button id="clearAllDataBtn" class="btn-danger">
+                                <i class="fas fa-trash"></i>
+                                מחק הכל
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal for Forms -->
+    <div id="modal" class="modal">
+        <div id="modalBody" class="modal-content">
+            <span class="close">&times;</span>
+            <!-- Modal content will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Success/Error Messages -->
+    <div id="messageContainer" class="message-container">
+        <!-- Messages will be populated by JavaScript -->
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html> 
