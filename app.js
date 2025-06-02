@@ -1,4 +1,6 @@
 // Data Management Class
+console.log('🔥 app.js STARTED LOADING');
+
 class FamilyTaskManager {
     constructor() {
         this.initializeData();
@@ -578,6 +580,24 @@ class UIManager {
                 console.log('🔥 Close modal clicked!');
                 e.preventDefault();
                 this.boundCloseModal();
+                return;
+            }
+            
+            // Handle screen navigation
+            if (target.hasAttribute('data-show-screen')) {
+                console.log('🔥 Show screen clicked!', target.getAttribute('data-show-screen'));
+                e.preventDefault();
+                const screenId = target.getAttribute('data-show-screen');
+                this.showScreen(screenId);
+                return;
+            }
+            
+            // Handle admin tabs
+            if (target.hasAttribute('data-admin-tab')) {
+                console.log('🔥 Admin tab clicked!', target.getAttribute('data-admin-tab'));
+                e.preventDefault();
+                const tabName = target.getAttribute('data-admin-tab');
+                this.showAdminTab(tabName);
                 return;
             }
         };
@@ -1866,10 +1886,14 @@ window.goBackFromTask = function() {
 let taskManager, ui;
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🔥 DOMContentLoaded event fired!');
     if (!taskManager) {
+        console.log('🔥 Creating new taskManager');
         taskManager = new FamilyTaskManager();
     }
     if (!ui) {
+        console.log('🔥 Creating new UIManager');
         ui = new UIManager(taskManager);
     }
+    console.log('🔥 Application initialized successfully!');
 }); 
