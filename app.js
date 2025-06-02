@@ -755,14 +755,18 @@ class ImageCropper {
 
         // Action buttons
         confirmCrop.addEventListener('click', () => {
+            console.log('🎯 Confirm crop clicked');
             const croppedDataUrl = this.getCroppedImage();
+            console.log('🎯 Got cropped image, closing modal');
             this.closeCropper(modal);
             if (this.cropCallback) {
+                console.log('🎯 Calling crop callback');
                 this.cropCallback(croppedDataUrl);
             }
         });
 
         cancelCrop.addEventListener('click', () => {
+            console.log('🎯 Cancel crop clicked');
             this.closeCropper(modal);
         });
 
@@ -1707,8 +1711,12 @@ class UIManager {
                 </div>
                 <div class="form-group">
                     <label>תמונת פרופיל</label>
-                    <input type="file" name="avatar" accept="image/*">
+                    <input type="file" name="avatar" accept="image/*" id="addAvatarFileInput">
                     <small>אופציונלי - תמונה לפרופיל</small>
+                    <button type="button" id="addCropImageBtn" class="crop-btn-inline" style="display: none; margin-top: 10px;">
+                        <i class="fas fa-crop"></i>
+                        חתוך תמונה
+                    </button>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
@@ -1722,7 +1730,6 @@ class UIManager {
         document.getElementById('addUserForm').onsubmit = (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
-            const avatarFile = formData.get('avatar');
             
             const userData = {
                 name: formData.get('name'),
@@ -1731,40 +1738,67 @@ class UIManager {
                 avatar: null
             };
             
-            // Handle image upload
-            if (avatarFile && avatarFile.size > 0) {
-                console.log('🔥 Starting image cropper...');
-                // Close current modal first
-                this.closeModal();
-                
-                // Use image cropper
-                const cropper = new ImageCropper();
-                cropper.showCropper(avatarFile, (croppedDataUrl) => {
-                    console.log('🔥 Cropped image received, size:', croppedDataUrl.length);
-                    userData.avatar = croppedDataUrl;
-                    
-                    // Clear the file input to prevent infinite loop
-                    const fileInput = document.querySelector('input[name="avatar"]');
-                    if (fileInput) {
-                        fileInput.value = '';
-                        console.log('🔥 File input cleared');
-                    }
-                    
-                    this.taskManager.addUser(userData);
-                    this.showMessage('המשתמש נוסף בהצלחה!', 'success');
-                    
-                    // Go back to home screen directly
-                    this.showScreen('homeScreen');
-                    this.render();
-                });
-            } else {
-                console.log('🔥 No avatar file, updating without image');
-                this.taskManager.updateUser(userId, updates);
-                this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
-                this.closeModal();
-                this.render();
-            }
+            // Only save form data - avatar is handled separately by crop button
+            console.log('🔥 Adding user with form data only');
+            this.taskManager.addUser(userData);
+            this.showMessage('המשתמש נוסף בהצלחה!', 'success');
+            this.closeModal();
+            this.render();
         };
+        
+        // Handle file selection for add user form
+        const addFileInput = document.getElementById('addAvatarFileInput');
+        const addCropBtn = document.getElementById('addCropImageBtn');
+        let addSelectedFile = null;
+        
+        addFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.size > 0) {
+                addSelectedFile = file;
+                addCropBtn.style.display = 'flex';
+                console.log('🔥 Add form: File selected, showing crop button');
+            } else {
+                addSelectedFile = null;
+                addCropBtn.style.display = 'none';
+                console.log('🔥 Add form: No file selected, hiding crop button');
+            }
+        });
+        
+        // Handle crop button click for add user
+        addCropBtn.addEventListener('click', () => {
+            if (!addSelectedFile) {
+                console.log('🔥 Add form: No file to crop');
+                return;
+            }
+            
+            console.log('🔥 Add form: Starting image cropper...');
+            // Get current form data first
+            const formData = new FormData(document.getElementById('addUserForm'));
+            const userData = {
+                name: formData.get('name'),
+                birthDate: formData.get('birthDate'),
+                role: formData.get('role'),
+                avatar: null
+            };
+            
+            // Close current modal first
+            this.closeModal();
+            
+            // Use image cropper
+            const cropper = new ImageCropper();
+            cropper.showCropper(addSelectedFile, (croppedDataUrl) => {
+                console.log('🔥 Add form: Cropped image received');
+                
+                // Add user with cropped avatar
+                userData.avatar = croppedDataUrl;
+                this.taskManager.addUser(userData);
+                this.showMessage('המשתמש נוסף בהצלחה עם תמונה!', 'success');
+                
+                // Go back to home screen directly
+                this.showScreen('homeScreen');
+                this.render();
+            });
+        });
     }
 
     editUser(userId) {
@@ -1803,8 +1837,12 @@ class UIManager {
                             <p style="font-size: 0.9rem; color: #666;">תמונה נוכחית</p>
                         </div>
                     ` : ''}
-                    <input type="file" name="avatar" accept="image/*">
+                    <input type="file" name="avatar" accept="image/*" id="avatarFileInput">
                     <small>אופציונלי - תמונה חדשה לפרופיל</small>
+                    <button type="button" id="cropImageBtn" class="crop-btn-inline" style="display: none; margin-top: 10px;">
+                        <i class="fas fa-crop"></i>
+                        חתוך תמונה
+                    </button>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
@@ -1828,11 +1866,6 @@ class UIManager {
             console.log('🔥 Form submit triggered');
             e.preventDefault();
             const formData = new FormData(e.target);
-            const avatarFile = formData.get('avatar');
-            
-            console.log('🔥 Avatar file:', avatarFile);
-            console.log('🔥 Avatar file size:', avatarFile ? avatarFile.size : 'no file');
-            console.log('🔥 Avatar file type:', avatarFile ? avatarFile.type : 'no file');
             
             const updates = {
                 name: formData.get('name'),
@@ -1840,39 +1873,58 @@ class UIManager {
                 role: formData.get('role')
             };
             
-            // Handle image upload
-            if (avatarFile && avatarFile.size > 0) {
-                console.log('🔥 Starting image cropper...');
-                // Use image cropper
-                const cropper = new ImageCropper();
-                cropper.showCropper(avatarFile, (croppedDataUrl) => {
-                    console.log('🔥 Cropped image received, size:', croppedDataUrl.length);
-                    updates.avatar = croppedDataUrl;
-                    
-                    // Clear the file input to prevent infinite loop
-                    const fileInput = document.querySelector('input[name="avatar"]');
-                    if (fileInput) {
-                        fileInput.value = '';
-                        console.log('🔥 File input cleared');
-                    }
-                    
-                    this.taskManager.updateUser(userId, updates);
-                    this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
-                    
-                    // Go back to home screen directly
-                    this.showScreen('homeScreen');
-                    this.render();
-                });
-            } else {
-                console.log('🔥 No avatar file, updating without image');
-                this.taskManager.updateUser(userId, updates);
-                this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
-                this.closeModal();
-                this.render();
-            }
+            // Only save form data - avatar is handled separately by crop button
+            console.log('🔥 Saving form data only');
+            this.taskManager.updateUser(userId, updates);
+            this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
+            this.closeModal();
+            this.render();
         };
         
-        console.log('🔥 editUser COMPLETED setup');
+        // Handle file selection to show/hide crop button
+        const fileInput = document.getElementById('avatarFileInput');
+        const cropBtn = document.getElementById('cropImageBtn');
+        let selectedFile = null;
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.size > 0) {
+                selectedFile = file;
+                cropBtn.style.display = 'flex';
+                console.log('🔥 File selected, showing crop button');
+            } else {
+                selectedFile = null;
+                cropBtn.style.display = 'none';
+                console.log('🔥 No file selected, hiding crop button');
+            }
+        });
+        
+        // Handle crop button click
+        cropBtn.addEventListener('click', () => {
+            if (!selectedFile) {
+                console.log('🔥 No file to crop');
+                return;
+            }
+            
+            console.log('🔥 Starting image cropper...');
+            // Close current modal first
+            this.closeModal();
+            
+            // Use image cropper
+            const cropper = new ImageCropper();
+            cropper.showCropper(selectedFile, (croppedDataUrl) => {
+                console.log('🔥 Cropped image received, size:', croppedDataUrl.length);
+                
+                // Update user with new avatar
+                const avatarUpdate = { avatar: croppedDataUrl };
+                this.taskManager.updateUser(userId, avatarUpdate);
+                this.showMessage('תמונת הפרופיל עודכנה בהצלחה!', 'success');
+                
+                // Go back to home screen directly
+                this.showScreen('homeScreen');
+                this.render();
+            });
+        });
     }
 
     exportData() {
