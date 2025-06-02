@@ -42,7 +42,47 @@ class FamilyTaskManager {
                 {
                     id: 3,
                     name: 'טלאור',
-                    birthDate: '2015-03-10',
+                    birthDate: '2012-04-03',
+                    role: 'ילד',
+                    avatar: null,
+                    points: 0,
+                    isPerformingTask: false,
+                    currentTaskId: null
+                },
+                {
+                    id: 4,
+                    name: 'שירציון',
+                    birthDate: '2013-12-11',
+                    role: 'ילד',
+                    avatar: null,
+                    points: 0,
+                    isPerformingTask: false,
+                    currentTaskId: null
+                },
+                {
+                    id: 5,
+                    name: 'פארי',
+                    birthDate: '2015-09-01',
+                    role: 'ילד',
+                    avatar: null,
+                    points: 0,
+                    isPerformingTask: false,
+                    currentTaskId: null
+                },
+                {
+                    id: 6,
+                    name: 'נגן',
+                    birthDate: '2018-10-08',
+                    role: 'ילד',
+                    avatar: null,
+                    points: 0,
+                    isPerformingTask: false,
+                    currentTaskId: null
+                },
+                {
+                    id: 7,
+                    name: 'כנה',
+                    birthDate: '2022-01-28',
                     role: 'ילד',
                     avatar: null,
                     points: 0,
@@ -61,7 +101,7 @@ class FamilyTaskManager {
                     image: null,
                     difficulty: 'קל',
                     isActive: true,
-                    assignedUsers: [3],
+                    assignedUsers: [3, 4, 5, 6],
                     points: 10,
                     taskType: 'personal',
                     currentlyPerformedBy: null
@@ -76,7 +116,7 @@ class FamilyTaskManager {
                     image: null,
                     difficulty: 'בינוני',
                     isActive: true,
-                    assignedUsers: [3],
+                    assignedUsers: [3, 4, 5, 6],
                     points: 20,
                     taskType: 'shared',
                     currentlyPerformedBy: null
@@ -91,7 +131,7 @@ class FamilyTaskManager {
                     image: null,
                     difficulty: 'בינוני',
                     isActive: true,
-                    assignedUsers: [3],
+                    assignedUsers: [3, 4, 5, 6],
                     points: 25,
                     taskType: 'shared',
                     currentlyPerformedBy: null
@@ -460,7 +500,7 @@ class UIManager {
             const statusText = performingStatus.isPerforming ? 'בביצוע משימה' : '';
             
             return `
-                <div class="profile-card ${statusClass}" onclick="ui.showUserProfile(${user.id})">
+                <div class="profile-card ${statusClass}" onclick="showUserProfile(${user.id})">
                     <div class="profile-avatar">
                         ${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : user.name.charAt(0)}
                         ${performingStatus.isPerforming ? '<div class="status-indicator"></div>' : ''}
@@ -484,7 +524,7 @@ class UIManager {
         container.innerHTML = rooms.map(room => {
             const taskCount = this.taskManager.getRoomTasks(room).length;
             return `
-                <div class="room-card" onclick="ui.showRoomTasks('${room}')">
+                <div class="room-card" onclick="showRoomTasks('${room}')">
                     <div class="room-image">
                         ${this.getRoomIcon(room)}
                     </div>
@@ -521,7 +561,7 @@ class UIManager {
             
             return `
                 <div class="task-card ${task.difficulty} ${availabilityClass}" 
-                     ${isAvailable ? `onclick="ui.startTask(${task.id})"` : ''}>
+                     ${isAvailable ? `onclick="startTask(${task.id})"` : ''}>
                     <div class="task-header">
                         <div class="task-title">${task.title}</div>
                         <div class="task-difficulty ${task.difficulty}">${task.difficulty}</div>
@@ -695,7 +735,7 @@ class UIManager {
         
         document.getElementById('modalBody').innerHTML = `
             <div class="task-timer-screen">
-                <button class="close-btn" onclick="ui.closeModal()">&times;</button>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
                 <h2>${task.title}</h2>
                 <div class="task-info">
                     <div class="task-description">${task.description}</div>
@@ -718,7 +758,7 @@ class UIManager {
                 <div class="timer-container">
                     <div class="timer-display" id="timerDisplay">00:00</div>
                     <div class="timer-controls">
-                        <button class="timer-btn stop" id="stopTimerBtn" onclick="ui.stopTimer()">
+                        <button class="timer-btn stop" id="stopTimerBtn" onclick="stopTimer()">
                             סיים משימה
                         </button>
                     </div>
@@ -785,7 +825,7 @@ class UIManager {
         
         document.getElementById('modalBody').innerHTML = `
             <div class="task-timer-screen">
-                <button class="close-btn" onclick="ui.closeModal()">&times;</button>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
                 <h2>${task.title}</h2>
                 <div class="task-info">
                     <div class="task-description">${task.description}</div>
@@ -808,10 +848,10 @@ class UIManager {
                 <div class="timer-container">
                     <div class="timer-display" id="timerDisplay">00:00</div>
                     <div class="timer-controls">
-                        <button class="timer-btn start" id="startTimerBtn" onclick="ui.startTimer()">
+                        <button class="timer-btn start" id="startTimerBtn" onclick="startTimer()">
                             התחל טיימר
                         </button>
-                        <button class="timer-btn stop" id="stopTimerBtn" onclick="ui.stopTimer()" disabled>
+                        <button class="timer-btn stop" id="stopTimerBtn" onclick="stopTimer()" disabled>
                             סיים משימה
                         </button>
                     </div>
@@ -1016,15 +1056,15 @@ class UIManager {
                 </div>
                 <div class="task-actions">
                     ${!task.isActive ? `
-                        <button class="btn-primary" onclick="ui.reactivateTask(${task.id})">
+                        <button class="btn-primary" onclick="reactivateTask(${task.id})">
                             הפעל מחדש
                         </button>
                     ` : `
-                        <button class="btn-secondary" onclick="ui.deactivateTask(${task.id})">
+                        <button class="btn-secondary" onclick="deactivateTask(${task.id})">
                             השבת
                         </button>
                     `}
-                    <button class="btn-secondary" onclick="ui.editTask(${task.id})">
+                    <button class="btn-secondary" onclick="editTask(${task.id})">
                         ערוך
                     </button>
                 </div>
@@ -1047,7 +1087,7 @@ class UIManager {
                     ${reward.cost} נקודות
                 </div>
                 <div class="task-actions">
-                    <button class="btn-secondary" onclick="ui.editReward(${reward.id})">
+                    <button class="btn-secondary" onclick="editReward(${reward.id})">
                         ערוך
                     </button>
                 </div>
@@ -1071,7 +1111,7 @@ class UIManager {
                     ${user.points} נקודות
                 </div>
                 <div class="task-actions">
-                    <button class="btn-secondary" onclick="ui.editUser(${user.id})">
+                    <button class="btn-secondary" onclick="editUser(${user.id})">
                         ערוך
                     </button>
                 </div>
@@ -1176,7 +1216,7 @@ class UIManager {
                     `).join('')}
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="ui.closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
                     <button type="submit" class="btn-primary">הוסף משימה</button>
                 </div>
             </form>
@@ -1220,7 +1260,7 @@ class UIManager {
                     <input type="number" name="cost" min="1" required>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="ui.closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
                     <button type="submit" class="btn-primary">הוסף פרס</button>
                 </div>
             </form>
@@ -1269,7 +1309,7 @@ class UIManager {
                     <small>אופציונלי - תמונה לפרופיל</small>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="ui.closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
                     <button type="submit" class="btn-primary">הוסף משתמש</button>
                 </div>
             </form>
@@ -1343,7 +1383,7 @@ class UIManager {
                     <small>אופציונלי - תמונה חדשה לפרופיל</small>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="ui.closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
                     <button type="submit" class="btn-primary">שמור שינויים</button>
                 </div>
             </form>
@@ -1515,7 +1555,7 @@ class UIManager {
                     `).join('')}
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="ui.closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
                     <button type="submit" class="btn-primary">שמור שינויים</button>
                 </div>
             </form>
@@ -1562,7 +1602,7 @@ class UIManager {
                     <input type="number" name="cost" value="${reward.cost}" min="1" required>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="ui.closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
                     <button type="submit" class="btn-primary">שמור שינויים</button>
                 </div>
             </form>
@@ -1662,6 +1702,48 @@ window.closeModal = function() {
 
 window.goBackFromTask = function() {
     ui.showScreen(ui.previousScreen);
+};
+
+// User and Profile functions
+window.showUserProfile = function(userId) {
+    ui.showUserProfile(userId);
+};
+
+window.showRoomTasks = function(room) {
+    ui.showRoomTasks(room);
+};
+
+window.startTask = function(taskId) {
+    ui.startTask(taskId);
+};
+
+window.startTimer = function() {
+    ui.startTimer();
+};
+
+window.stopTimer = function() {
+    ui.stopTimer();
+};
+
+// Admin functions
+window.editUser = function(userId) {
+    ui.editUser(userId);
+};
+
+window.editTask = function(taskId) {
+    ui.editTask(taskId);
+};
+
+window.editReward = function(rewardId) {
+    ui.editReward(rewardId);
+};
+
+window.reactivateTask = function(taskId) {
+    ui.reactivateTask(taskId);
+};
+
+window.deactivateTask = function(taskId) {
+    ui.deactivateTask(taskId);
 };
 
 // Initialize the application
