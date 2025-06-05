@@ -122,20 +122,11 @@
             </div>
             <div class="admin-content">
                 <div class="admin-tabs">
-<<<<<<< HEAD
-                    <button class="admin-tab active" onclick="showAdminTab('tasks')">משימות</button>
-                    <button class="admin-tab" onclick="showAdminTab('rewards')">פרסים</button>
-                    <button class="admin-tab" onclick="showAdminTab('users')">משתמשים</button>
-                    <button class="admin-tab" onclick="showAdminTab('bulkAdd')">הוספה מרובה</button>
-                    <button class="admin-tab" onclick="showAdminTab('stats')">סטטיסטיקות</button>
-                    <button class="admin-tab" onclick="showAdminTab('settings')">הגדרות</button>
-=======
                     <button class="admin-tab active" data-admin-tab="tasks">ניהול משימות</button>
                     <button class="admin-tab" data-admin-tab="rewards">ניהול פרסים</button>
                     <button class="admin-tab" data-admin-tab="users">ניהול משתמשים</button>
                     <button class="admin-tab" data-admin-tab="stats">סטטיסטיקות</button>
                     <button class="admin-tab" data-admin-tab="settings">הגדרות</button>
->>>>>>> b988212c80802f10c437bbce7450719124f01142
                 </div>
                 
                 <div id="adminTasksTab" class="admin-tab-content active">
@@ -194,7 +185,7 @@
                             <form id="bulkAddForm" class="bulk-add-form">
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label>�� שם המשימה *</label>
+                                        <label>שם המשימה *</label>
                                         <input type="text" name="title" required placeholder="למשל: לסדר את החדר">
                                     </div>
                                     <div class="form-group">
@@ -345,6 +336,7 @@
         <!-- Messages will be populated by JavaScript -->
     </div>
 
+    <!-- Load JavaScript -->
     <script src="app.js"></script>
 </body>
 </html> 
