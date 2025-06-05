@@ -1,4 +1,6 @@
 // Data Management Class
+console.log('🔥 app.js STARTED LOADING');
+
 class FamilyTaskManager {
     constructor() {
         this.initializeData();
@@ -10,6 +12,12 @@ class FamilyTaskManager {
         this.timerInterval = null;
         this.previousScreen = 'homeScreen';
         this.activeTimers = new Map();
+        
+        // Check storage usage
+        const storageInfo = this.getStorageInfo();
+        if (storageInfo && storageInfo.usagePercent > 80) {
+            console.warn('🔥 WARNING: Storage usage is high!', storageInfo.usagePercent + '%');
+        }
         
         // Restore any active timers from localStorage
         this.restoreActiveTimers();
@@ -32,7 +40,7 @@ class FamilyTaskManager {
                 {
                     id: 2,
                     name: 'אבא',
-                    birthDate: '1987-11-09',
+                    birthDate: '1987-09-11',
                     role: 'הורה',
                     avatar: null,
                     points: 0,
@@ -511,6 +519,69 @@ class FamilyTaskManager {
             }
         });
     }
+
+    // Helper method to compress image
+    compressImage(file, maxWidth = 150, quality = 0.8) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = () => {
+                // Calculate new dimensions
+                let { width, height } = img;
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                // Draw and compress
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                
+                console.log('🔥 Image compressed from', Math.round(file.size / 1024), 'KB to', Math.round(compressedDataUrl.length * 0.75 / 1024), 'KB');
+                resolve(compressedDataUrl);
+            };
+            
+            img.src = URL.createObjectURL(file);
+        });
+    }
+
+    // Check localStorage usage
+    getStorageInfo() {
+        try {
+            const data = localStorage.getItem('familyTaskData');
+            const sizeInBytes = data ? data.length : 0;
+            const sizeInKB = Math.round(sizeInBytes / 1024);
+            const sizeInMB = Math.round(sizeInKB / 1024 * 100) / 100;
+            
+            // Estimate localStorage limit (usually 5-10MB)
+            const estimatedLimit = 5 * 1024; // 5MB in KB
+            const usagePercent = Math.round(sizeInKB / estimatedLimit * 100);
+            
+            console.log('🔥 Storage info:', {
+                sizeInBytes,
+                sizeInKB,
+                sizeInMB,
+                usagePercent: `${usagePercent}%`,
+                estimatedLimit: `${estimatedLimit}KB`
+            });
+            
+            return {
+                sizeInBytes,
+                sizeInKB,
+                sizeInMB,
+                usagePercent,
+                estimatedLimit
+            };
+        } catch (error) {
+            console.error('🔥 Error getting storage info:', error);
+            return null;
+        }
+    }
 }
 
 // Image Cropper Class
@@ -858,44 +929,151 @@ class UIManager {
     constructor(taskManager) {
         this.taskManager = taskManager;
         
-        // Only initialize if not already done
-        if (!this.isInitialized) {
-            this.initializeEventListeners();
-            this.isInitialized = true;
-        }
+        // Store bound methods to prevent context issues
+        this.boundEditUser = this.editUser.bind(this);
+        this.boundEditTask = this.editTask.bind(this);
+        this.boundEditReward = this.editReward.bind(this);
+        this.boundReactivateTask = this.reactivateTask.bind(this);
+        this.boundDeactivateTask = this.deactivateTask.bind(this);
+        this.boundShowUserProfile = this.showUserProfile.bind(this);
+        this.boundShowRoomTasks = this.showRoomTasks.bind(this);
+        this.boundStartTask = this.startTask.bind(this);
+        this.boundStartTimer = this.startTimer.bind(this);
+        this.boundStopTimer = this.stopTimer.bind(this);
+        this.boundCloseModal = this.closeModal.bind(this);
+        
+        // Store the event handler function to be able to remove it later
+        this.clickHandler = this.createClickHandler();
+        
+        // Initialize event listeners ONLY ONCE
+        console.log('🔥 Initializing event listeners for the first and last time');
+        this.initializeEventListeners();
         
         this.render();
     }
 
-    initializeEventListeners() {
-        // Admin button - will be shown only for parents
-        const adminBtn = document.getElementById('adminBtn');
-        if (adminBtn) {
-            adminBtn.addEventListener('click', () => {
-                this.showScreen('adminScreen');
-            });
-        }
-
-        // Modal close - check if exists
-        const modalClose = document.querySelector('.modal-content .close');
-        if (modalClose) {
-            modalClose.addEventListener('click', () => {
-                this.closeModal();
-            });
-        }
-
-        // Click outside modal to close
-        const modal = document.getElementById('modal');
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target.id === 'modal') {
-                    this.closeModal();
-                }
-            });
-        }
+    createClickHandler() {
+        return (e) => {
+            console.log('🔥 Click detected on:', e.target, 'Closest button:', e.target.closest('button'));
+            const target = e.target.closest('button') || e.target.closest('[data-action]') || e.target;
+            
+            // Handle edit user buttons
+            if (target.hasAttribute('data-edit-user')) {
+                console.log('🔥 Edit user clicked!', target.getAttribute('data-edit-user'));
+                e.preventDefault();
+                const userId = parseInt(target.getAttribute('data-edit-user'));
+                this.boundEditUser(userId);
+                return;
+            }
+            
+            // Handle edit task buttons
+            if (target.hasAttribute('data-edit-task')) {
+                console.log('🔥 Edit task clicked!', target.getAttribute('data-edit-task'));
+                e.preventDefault();
+                const taskId = parseInt(target.getAttribute('data-edit-task'));
+                this.boundEditTask(taskId);
+                return;
+            }
+            
+            // Handle edit reward buttons
+            if (target.hasAttribute('data-edit-reward')) {
+                console.log('🔥 Edit reward clicked!', target.getAttribute('data-edit-reward'));
+                e.preventDefault();
+                const rewardId = parseInt(target.getAttribute('data-edit-reward'));
+                this.boundEditReward(rewardId);
+                return;
+            }
+            
+            // Handle reactivate task
+            if (target.hasAttribute('data-reactivate-task')) {
+                console.log('🔥 Reactivate task clicked!', target.getAttribute('data-reactivate-task'));
+                e.preventDefault();
+                const taskId = parseInt(target.getAttribute('data-reactivate-task'));
+                this.boundReactivateTask(taskId);
+                return;
+            }
+            
+            // Handle deactivate task
+            if (target.hasAttribute('data-deactivate-task')) {
+                console.log('🔥 Deactivate task clicked!', target.getAttribute('data-deactivate-task'));
+                e.preventDefault();
+                const taskId = parseInt(target.getAttribute('data-deactivate-task'));
+                this.boundDeactivateTask(taskId);
+                return;
+            }
+            
+            // Handle profile cards
+            if (target.hasAttribute('data-show-profile')) {
+                console.log('🔥 Show profile clicked!', target.getAttribute('data-show-profile'));
+                e.preventDefault();
+                const userId = parseInt(target.getAttribute('data-show-profile'));
+                this.boundShowUserProfile(userId);
+                return;
+            }
+            
+            // Handle room cards
+            if (target.hasAttribute('data-show-room')) {
+                console.log('🔥 Show room clicked!', target.getAttribute('data-show-room'));
+                e.preventDefault();
+                const room = target.getAttribute('data-show-room');
+                this.boundShowRoomTasks(room);
+                return;
+            }
+            
+            // Handle task cards
+            if (target.hasAttribute('data-start-task')) {
+                console.log('🔥 Start task clicked!', target.getAttribute('data-start-task'));
+                e.preventDefault();
+                const taskId = parseInt(target.getAttribute('data-start-task'));
+                this.boundStartTask(taskId);
+                return;
+            }
+            
+            // Handle timer buttons
+            if (target.hasAttribute('data-start-timer')) {
+                console.log('🔥 Start timer clicked!');
+                e.preventDefault();
+                this.boundStartTimer();
+                return;
+            }
+            
+            if (target.hasAttribute('data-stop-timer')) {
+                console.log('🔥 Stop timer clicked!');
+                e.preventDefault();
+                this.boundStopTimer();
+                return;
+            }
+            
+            // Handle modal close
+            if (target.hasAttribute('data-close-modal')) {
+                console.log('🔥 Close modal clicked!');
+                e.preventDefault();
+                this.boundCloseModal();
+                return;
+            }
+            
+            // Handle screen navigation
+            if (target.hasAttribute('data-show-screen')) {
+                console.log('🔥 Show screen clicked!', target.getAttribute('data-show-screen'));
+                e.preventDefault();
+                const screenId = target.getAttribute('data-show-screen');
+                this.showScreen(screenId);
+                return;
+            }
+            
+            // Handle admin tabs
+            if (target.hasAttribute('data-admin-tab')) {
+                console.log('🔥 Admin tab clicked!', target.getAttribute('data-admin-tab'));
+                e.preventDefault();
+                const tabName = target.getAttribute('data-admin-tab');
+                this.showAdminTab(tabName);
+                return;
+            }
+        };
     }
 
     render() {
+        console.log('🔥 render() called - STACK TRACE:', new Error().stack.split('\n').slice(1, 4));
         this.renderFamilyProfiles();
         this.renderRooms();
         this.renderRewards();
@@ -904,20 +1082,26 @@ class UIManager {
         // Hide admin button initially when on home screen
         const adminBtn = document.getElementById('adminBtn');
         adminBtn.style.display = 'none';
+        
+        // DON'T re-initialize event listeners after render! This was causing duplicates!
+        console.log('🔥 render() completed (no event listener re-init)');
     }
 
     renderFamilyProfiles() {
+        console.log('🔥 renderFamilyProfiles called');
         const container = document.getElementById('familyProfiles');
         const users = this.taskManager.getUsers();
+        console.log('🔥 Users to render:', users);
         
         container.innerHTML = users.map(user => {
+            console.log('🔥 Rendering user:', user.name, 'ID:', user.id);
             const age = this.taskManager.calculateAge(user.birthDate);
             const performingStatus = this.taskManager.getUserPerformingStatus(user.id);
             const statusClass = performingStatus.isPerforming ? 'performing-task' : '';
             const statusText = performingStatus.isPerforming ? 'בביצוע משימה' : '';
             
-            return `
-                <div class="profile-card ${statusClass}" onclick="showUserProfile(${user.id})">
+            const profileHtml = `
+                <div class="profile-card ${statusClass}" data-show-profile="${user.id}">
                     <div class="profile-avatar">
                         ${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : user.name.charAt(0)}
                         ${performingStatus.isPerforming ? '<div class="status-indicator"></div>' : ''}
@@ -931,7 +1115,10 @@ class UIManager {
                     </div>
                 </div>
             `;
+            console.log('🔥 Profile HTML for', user.name, ':', profileHtml);
+            return profileHtml;
         }).join('');
+        console.log('🔥 renderFamilyProfiles completed');
     }
 
     renderRooms() {
@@ -941,7 +1128,7 @@ class UIManager {
         container.innerHTML = rooms.map(room => {
             const taskCount = this.taskManager.getRoomTasks(room).length;
             return `
-                <div class="room-card" onclick="showRoomTasks('${room}')">
+                <div class="room-card" data-show-room="${room}">
                     <div class="room-image">
                         ${this.getRoomIcon(room)}
                     </div>
@@ -978,7 +1165,7 @@ class UIManager {
             
             return `
                 <div class="task-card ${task.difficulty} ${availabilityClass}" 
-                     ${isAvailable ? `onclick="startTask(${task.id})"` : ''}>
+                     ${isAvailable ? `data-start-task="${task.id}"` : ''}>
                     <div class="task-header">
                         <div class="task-title">${task.title}</div>
                         <div class="task-difficulty ${task.difficulty}">${task.difficulty}</div>
@@ -1045,30 +1232,45 @@ class UIManager {
     }
 
     showUserProfile(userId) {
+        console.log('🔥 showUserProfile called with userId:', userId, typeof userId);
         this.taskManager.currentUser = userId;
         const user = this.taskManager.getUser(userId);
+        console.log('🔥 User found:', user);
+        
+        if (!user) {
+            console.error('🔥 User not found for id:', userId);
+            return;
+        }
         
         // Check if user has an active task - if so, open timer directly
         const performingStatus = this.taskManager.getUserPerformingStatus(userId);
+        console.log('🔥 User performing status:', performingStatus);
         if (performingStatus.isPerforming && performingStatus.taskId) {
+            console.log('🔥 User has active task, opening timer');
             this.openActiveTaskTimer(performingStatus.taskId, userId);
             return;
         }
         
         const userTasks = this.taskManager.getUserTasks(userId);
+        console.log('🔥 User tasks:', userTasks);
         
         // Show admin button only for parents
         const adminBtn = document.getElementById('adminBtn');
+        console.log('🔥 User role:', user.role, 'Admin button:', adminBtn);
         if (user.role === 'הורה') {
+            console.log('🔥 Showing admin button for parent');
             adminBtn.style.display = 'flex';
         } else {
+            console.log('🔥 Hiding admin button for child');
             adminBtn.style.display = 'none';
         }
         
         // Update profile info
+        console.log('🔥 Updating profile title');
         document.getElementById('profileTitle').textContent = `הפרופיל של ${user.name}`;
         
         // Update profile info section
+        console.log('🔥 Updating profile info section');
         document.getElementById('profileInfo').innerHTML = `
             <div class="profile-avatar">
                 ${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : user.name.charAt(0)}
@@ -1084,6 +1286,7 @@ class UIManager {
         // Update stats
         const weeklyStats = this.taskManager.getWeeklyStats();
         const userStats = weeklyStats[userId] || {};
+        console.log('🔥 User stats:', userStats);
         
         document.getElementById('profileStats').innerHTML = `
             <div class="stat-card">
@@ -1101,10 +1304,13 @@ class UIManager {
         `;
         
         // Render user tasks
+        console.log('🔥 Rendering user tasks');
         this.renderTasks(userTasks, 'userTasksList');
         
         this.previousScreen = 'homeScreen';
+        console.log('🔥 About to show profile screen');
         this.showScreen('profileScreen');
+        console.log('🔥 showUserProfile completed');
     }
 
     openActiveTaskTimer(taskId, userId) {
@@ -1152,7 +1358,7 @@ class UIManager {
         
         document.getElementById('modalBody').innerHTML = `
             <div class="task-timer-screen">
-                <button class="close-btn" onclick="closeModal()">&times;</button>
+                <button class="close-btn" data-close-modal>&times;</button>
                 <h2>${task.title}</h2>
                 <div class="task-info">
                     <div class="task-description">${task.description}</div>
@@ -1175,7 +1381,7 @@ class UIManager {
                 <div class="timer-container">
                     <div class="timer-display" id="timerDisplay">00:00</div>
                     <div class="timer-controls">
-                        <button class="timer-btn stop" id="stopTimerBtn" onclick="stopTimer()">
+                        <button class="timer-btn stop" id="stopTimerBtn" data-stop-timer>
                             סיים משימה
                         </button>
                     </div>
@@ -1242,7 +1448,7 @@ class UIManager {
         
         document.getElementById('modalBody').innerHTML = `
             <div class="task-timer-screen">
-                <button class="close-btn" onclick="closeModal()">&times;</button>
+                <button class="close-btn" data-close-modal>&times;</button>
                 <h2>${task.title}</h2>
                 <div class="task-info">
                     <div class="task-description">${task.description}</div>
@@ -1265,10 +1471,10 @@ class UIManager {
                 <div class="timer-container">
                     <div class="timer-display" id="timerDisplay">00:00</div>
                     <div class="timer-controls">
-                        <button class="timer-btn start" id="startTimerBtn" onclick="startTimer()">
+                        <button class="timer-btn start" id="startTimerBtn" data-start-timer>
                             התחל טיימר
                         </button>
-                        <button class="timer-btn stop" id="stopTimerBtn" onclick="stopTimer()" disabled>
+                        <button class="timer-btn stop" id="stopTimerBtn" data-stop-timer>
                             סיים משימה
                         </button>
                     </div>
@@ -1487,15 +1693,15 @@ class UIManager {
                 </div>
                 <div class="task-actions">
                     ${!task.isActive ? `
-                        <button class="btn-primary" onclick="reactivateTask(${task.id})">
+                        <button class="btn-primary" data-reactivate-task="${task.id}">
                             הפעל מחדש
                         </button>
                     ` : `
-                        <button class="btn-secondary" onclick="deactivateTask(${task.id})">
+                        <button class="btn-secondary" data-deactivate-task="${task.id}">
                             השבת
                         </button>
                     `}
-                    <button class="btn-secondary" onclick="editTask(${task.id})">
+                    <button class="btn-secondary" data-edit-task="${task.id}">
                         ערוך
                     </button>
                 </div>
@@ -1518,7 +1724,7 @@ class UIManager {
                     ${reward.cost} נקודות
                 </div>
                 <div class="task-actions">
-                    <button class="btn-secondary" onclick="editReward(${reward.id})">
+                    <button class="btn-secondary" data-edit-reward="${reward.id}">
                         ערוך
                     </button>
                 </div>
@@ -1542,7 +1748,7 @@ class UIManager {
                     ${user.points} נקודות
                 </div>
                 <div class="task-actions">
-                    <button class="btn-secondary" onclick="editUser(${user.id})">
+                    <button class="btn-secondary" data-edit-user="${user.id}">
                         ערוך
                     </button>
                 </div>
@@ -1647,7 +1853,7 @@ class UIManager {
                     `).join('')}
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" data-close-modal>ביטול</button>
                     <button type="submit" class="btn-primary">הוסף משימה</button>
                 </div>
             </form>
@@ -1691,7 +1897,7 @@ class UIManager {
                     <input type="number" name="cost" min="1" required>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" data-close-modal>ביטול</button>
                     <button type="submit" class="btn-primary">הוסף פרס</button>
                 </div>
             </form>
@@ -1744,7 +1950,7 @@ class UIManager {
                     </button>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" data-close-modal>ביטול</button>
                     <button type="submit" class="btn-primary">הוסף משתמש</button>
                 </div>
             </form>
@@ -1778,7 +1984,7 @@ class UIManager {
                 // Only save form data - no image
                 console.log('🔥 Adding user with form data only');
                 this.taskManager.addUser(userData);
-                this.showMessage('המשתמש נוסף בהצלחה!', 'success');
+                this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
                 this.closeModal();
                 this.render();
             }
@@ -1883,7 +2089,7 @@ class UIManager {
                     </button>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" data-close-modal>ביטול</button>
                     <button type="submit" class="btn-primary">שמור שינויים</button>
                 </div>
             </form>
@@ -1912,22 +2118,44 @@ class UIManager {
                 role: formData.get('role')
             };
             
-            // Handle image upload if file exists and crop wasn't used
+            console.log('🔥 About to update user with:', updates);
+            
+            // Handle image upload
             if (avatarFile && avatarFile.size > 0) {
-                console.log('🔥 File exists, using basic compression');
-                this.taskManager.compressImage(avatarFile).then(compressedDataUrl => {
-                    updates.avatar = compressedDataUrl;
-                    this.taskManager.updateUser(userId, updates);
-                    this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
-                    this.closeModal();
-                    this.render();
-                });
+                console.log('🔥 Processing image file, size:', Math.round(avatarFile.size / 1024), 'KB');
+                
+                // Check file size - if too big, compress
+                if (avatarFile.size > 500000) { // 500KB
+                    console.log('🔥 Image is large, compressing...');
+                    this.taskManager.compressImage(avatarFile).then((compressedDataUrl) => {
+                        updates.avatar = compressedDataUrl;
+                        console.log('🔥 Updating user with compressed avatar');
+                        this.taskManager.updateUser(userId, updates);
+                        this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
+                        this.closeModal();
+                        console.log('🔥 About to render after user update');
+                        this.render();
+                    });
+                } else {
+                    console.log('🔥 Image is small enough, using as-is');
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        updates.avatar = event.target.result;
+                        console.log('🔥 Updating user with avatar');
+                        this.taskManager.updateUser(userId, updates);
+                        this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
+                        this.closeModal();
+                        console.log('🔥 About to render after user update');
+                        this.render();
+                    };
+                    reader.readAsDataURL(avatarFile);
+                }
             } else {
-                // Only save form data - no image
-                console.log('🔥 Saving form data only');
+                console.log('🔥 Updating user without avatar');
                 this.taskManager.updateUser(userId, updates);
                 this.showMessage('פרטי המשתמש עודכנו בהצלחה!', 'success');
                 this.closeModal();
+                console.log('🔥 About to render after user update');
                 this.render();
             }
         };
@@ -2128,7 +2356,7 @@ class UIManager {
                     `).join('')}
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" data-close-modal>ביטול</button>
                     <button type="submit" class="btn-primary">שמור שינויים</button>
                 </div>
             </form>
@@ -2175,7 +2403,7 @@ class UIManager {
                     <input type="number" name="cost" value="${reward.cost}" min="1" required>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal()">ביטול</button>
+                    <button type="button" class="btn-secondary" data-close-modal>ביטול</button>
                     <button type="submit" class="btn-primary">שמור שינויים</button>
                 </div>
             </form>
@@ -2285,9 +2513,46 @@ class UIManager {
         // Add active class to selected tab button
         event.target.classList.add('active');
     }
+
+    initializeEventListeners() {
+        // Remove existing event listener if it exists
+        if (this.clickHandler) {
+            document.removeEventListener('click', this.clickHandler);
+        }
+        
+        // Admin button - will be shown only for parents
+        const adminBtn = document.getElementById('adminBtn');
+        if (adminBtn) {
+            adminBtn.addEventListener('click', () => {
+                this.showScreen('adminScreen');
+            });
+        }
+
+        // Modal close - check if exists
+        const modalClose = document.querySelector('.modal-content .close');
+        if (modalClose) {
+            modalClose.addEventListener('click', () => {
+                this.closeModal();
+            });
+        }
+
+        // Click outside modal to close
+        const modal = document.getElementById('modal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target.id === 'modal') {
+                    this.closeModal();
+                }
+            });
+        }
+
+        // Add the main click handler
+        document.addEventListener('click', this.clickHandler);
+        console.log('🔥 Event listeners initialized/re-initialized');
+    }
 }
 
-// Global functions for window scope
+// Global functions for window scope - only keeping essential ones
 window.showScreen = function(screenId) {
     if (ui) ui.showScreen(screenId);
 };
@@ -2387,186 +2652,12 @@ window.imageCropperCancel = function() {
 };
 
 // Initialize the application
-let taskManager, ui;
-
 document.addEventListener('DOMContentLoaded', () => {
-    if (!taskManager) {
-        taskManager = new FamilyTaskManager();
-    }
-    if (!ui) {
-        ui = new UIManager(taskManager);
-    }
-}); window.toggleUserCheckbox = function(userId) { const checkbox = document.getElementById(`bulk_user_${userId}`); const container = checkbox.closest(".user-checkbox"); if (checkbox.checked) { checkbox.checked = false; container.classList.remove("selected"); } else { checkbox.checked = true; container.classList.add("selected"); } };
-// Adding bulk add methods to UIManager prototype
-UIManager.prototype.initializeBulkAdd = function() {
-    console.log('🚀 Initializing bulk add functionality');
-    this.bulkAddCounter = 1;
-    this.bulkAddSummary = [];
-    
-    this.renderBulkAddUsers();
-    this.setupBulkAddEvents();
-    this.updateBulkAddCounter();
-};
-
-UIManager.prototype.renderBulkAddUsers = function() {
-    const container = document.getElementById('bulkAssignedUsers');
-    if (!container) {
-        console.log('❌ bulkAssignedUsers container not found');
-        return;
-    }
-    
-    const users = this.taskManager.getUsers().filter(user => user.role === 'ילד');
-    console.log('👥 Found child users:', users.length);
-    
-    container.innerHTML = users.map(user => `
-        <div class="user-checkbox" onclick="toggleUserCheckbox(${user.id})">
-            <input type="checkbox" name="assignedUsers" value="${user.id}" id="bulk_user_${user.id}">
-            <label for="bulk_user_${user.id}">${user.name}</label>
-        </div>
-    `).join('');
-};
-
-UIManager.prototype.setupBulkAddEvents = function() {
-    const form = document.getElementById('bulkAddForm');
-    const resetBtn = document.getElementById('resetBulkForm');
-    const addAndFinishBtn = document.getElementById('addAndFinish');
-
-    console.log('🔧 Setting up bulk add events', {
-        form: !!form,
-        resetBtn: !!resetBtn,
-        addAndFinishBtn: !!addAndFinishBtn
-    });
-
-    if (form) {
-        form.onsubmit = (e) => {
-            e.preventDefault();
-            this.handleBulkAddSubmit(false);
-        };
-    }
-
-    if (resetBtn) {
-        resetBtn.onclick = () => this.resetBulkAddForm();
-    }
-
-    if (addAndFinishBtn) {
-        addAndFinishBtn.onclick = () => this.handleBulkAddSubmit(true);
-    }
-};
-
-UIManager.prototype.handleBulkAddSubmit = function(shouldFinish) {
-    console.log('📝 Handling bulk add submit, shouldFinish:', shouldFinish);
-    const form = document.getElementById('bulkAddForm');
-    const formData = new FormData(form);
-    const assignedUsers = Array.from(formData.getAll('assignedUsers')).map(id => parseInt(id));
-
-    if (assignedUsers.length === 0) {
-        this.showMessage('יש לבחור לפחות משתמש אחד', 'error');
-        return;
-    }
-
-    const taskData = {
-        title: formData.get('title'),
-        description: formData.get('description'),
-        duration: parseInt(formData.get('duration')),
-        ageRange: formData.get('ageRange'),
-        room: formData.get('room'),
-        difficulty: formData.get('difficulty'),
-        points: parseInt(formData.get('points')),
-        assignedUsers: assignedUsers,
-        taskType: formData.get('taskType')
-    };
-
-    console.log('📋 Task data:', taskData);
-    const newTask = this.taskManager.addTask(taskData);
-    
-    this.bulkAddSummary.push({
-        title: taskData.title,
-        points: taskData.points,
-        room: taskData.room,
-        difficulty: taskData.difficulty
-    });
-
-    this.showMessage(`משימה "${taskData.title}" נוספה בהצלחה! 🎉`, 'success');
-    
-    if (shouldFinish) {
-        this.showMessage('כל המשימות נוספו בהצלחה! חוזר לעמוד הבית...', 'success');
-        setTimeout(() => {
-            this.showScreen('homeScreen');
-            this.render();
-        }, 2000);
-    } else {
-        this.bulkAddCounter++;
-        this.updateBulkAddCounter();
-        this.resetBulkAddForm(false);
-        this.updateBulkAddSummary();
-        
-        setTimeout(() => {
-            const titleInput = form.querySelector('input[name="title"]');
-            if (titleInput) titleInput.focus();
-        }, 100);
-    }
-};
-
-UIManager.prototype.resetBulkAddForm = function(resetCounter = true) {
-    const form = document.getElementById('bulkAddForm');
-    if (!form) return;
-    
-    form.reset();
-    
-    form.querySelector('input[name="points"]').value = '10';
-    form.querySelector('select[name="duration"]').value = '15';
-    form.querySelector('select[name="taskType"]').value = 'personal';
-    form.querySelector('select[name="difficulty"]').value = 'קל';
-    form.querySelector('input[name="ageRange"]').value = '5-15';
-    
-    form.querySelectorAll('input[name="assignedUsers"]').forEach(checkbox => {
-        checkbox.checked = false;
-    });
-    
-    document.querySelectorAll('.user-checkbox').forEach(div => {
-        div.classList.remove('selected');
-    });
-
-    if (resetCounter) {
-        this.bulkAddCounter = 1;
-        this.bulkAddSummary = [];
-        this.updateBulkAddCounter();
-        this.updateBulkAddSummary();
-    }
-};
-
-UIManager.prototype.updateBulkAddCounter = function() {
-    const counter = document.getElementById('bulkAddCounter');
-    if (counter) {
-        counter.textContent = `משימה #${this.bulkAddCounter}`;
-    }
-};
-
-UIManager.prototype.updateBulkAddSummary = function() {
-    const container = document.getElementById('bulkAddSummary');
-    if (!container) return;
-    
-    if (this.bulkAddSummary.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #6c757d; margin: 2rem 0;">🎯 עדיין לא נוספו משימות</p>';
-        return;
-    }
-
-    container.innerHTML = this.bulkAddSummary.map(task => `
-        <div class="summary-item">
-            <div class="summary-item-info">
-                <div class="summary-item-title">${task.title}</div>
-                <div class="summary-item-details">${task.room} • ${task.difficulty}</div>
-            </div>
-            <div class="summary-item-points">${task.points} נק׳</div>
-        </div>
-    `).join('');
-};
-
-// Override showAdminTab to initialize bulk add when needed
-const originalShowAdminTab = window.showAdminTab;
-window.showAdminTab = function(tabName) {
-    originalShowAdminTab.call(this, tabName);
-    if (tabName === 'bulkAdd' && ui) {
-        setTimeout(() => ui.initializeBulkAdd(), 100);
-    }
-}; 
+    console.log('🚀 Initializing application...');
+    const taskManager = new FamilyTaskManager();
+    const uiManager = new UIManager(taskManager);
+    window.taskManager = taskManager; // For debugging
+    window.uiManager = uiManager; // For debugging
+    uiManager.render();
+    console.log('✅ Application initialized successfully');
+}); 
