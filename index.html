@@ -47,7 +47,7 @@
         <!-- User Profile Screen -->
         <section id="profileScreen" class="screen">
             <div class="screen-header">
-                <button class="back-btn" onclick="showScreen('homeScreen')">
+                <button class="back-btn" data-show-screen="homeScreen">
                     <i class="fas fa-arrow-right"></i>
                     חזרה
                 </button>
@@ -72,7 +72,7 @@
         <!-- Room Tasks Screen -->
         <section id="roomScreen" class="screen">
             <div class="screen-header">
-                <button class="back-btn" onclick="showScreen('homeScreen')">
+                <button class="back-btn" data-show-screen="homeScreen">
                     <i class="fas fa-arrow-right"></i>
                     חזרה
                 </button>
@@ -100,7 +100,7 @@
         <!-- Rewards Store Screen -->
         <section id="rewardsScreen" class="screen">
             <div class="screen-header">
-                <button class="back-btn" onclick="showScreen('homeScreen')">
+                <button class="back-btn" data-show-screen="homeScreen">
                     <i class="fas fa-arrow-right"></i>
                     חזרה
                 </button>
@@ -114,7 +114,7 @@
         <!-- Admin Panel Screen -->
         <section id="adminScreen" class="screen">
             <div class="screen-header">
-                <button class="back-btn" onclick="showScreen('homeScreen')">
+                <button class="back-btn" data-show-screen="homeScreen">
                     <i class="fas fa-arrow-right"></i>
                     חזרה
                 </button>
@@ -122,12 +122,20 @@
             </div>
             <div class="admin-content">
                 <div class="admin-tabs">
+<<<<<<< HEAD
                     <button class="admin-tab active" onclick="showAdminTab('tasks')">משימות</button>
                     <button class="admin-tab" onclick="showAdminTab('rewards')">פרסים</button>
                     <button class="admin-tab" onclick="showAdminTab('users')">משתמשים</button>
                     <button class="admin-tab" onclick="showAdminTab('bulkAdd')">הוספה מרובה</button>
                     <button class="admin-tab" onclick="showAdminTab('stats')">סטטיסטיקות</button>
                     <button class="admin-tab" onclick="showAdminTab('settings')">הגדרות</button>
+=======
+                    <button class="admin-tab active" data-admin-tab="tasks">ניהול משימות</button>
+                    <button class="admin-tab" data-admin-tab="rewards">ניהול פרסים</button>
+                    <button class="admin-tab" data-admin-tab="users">ניהול משתמשים</button>
+                    <button class="admin-tab" data-admin-tab="stats">סטטיסטיקות</button>
+                    <button class="admin-tab" data-admin-tab="settings">הגדרות</button>
+>>>>>>> b988212c80802f10c437bbce7450719124f01142
                 </div>
                 
                 <div id="adminTasksTab" class="admin-tab-content active">
