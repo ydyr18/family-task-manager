@@ -122,9 +122,10 @@
             </div>
             <div class="admin-content">
                 <div class="admin-tabs">
-                    <button class="admin-tab active" onclick="showAdminTab('tasks')">ניהול משימות</button>
-                    <button class="admin-tab" onclick="showAdminTab('rewards')">ניהול פרסים</button>
-                    <button class="admin-tab" onclick="showAdminTab('users')">ניהול משתמשים</button>
+                    <button class="admin-tab active" onclick="showAdminTab('tasks')">משימות</button>
+                    <button class="admin-tab" onclick="showAdminTab('rewards')">פרסים</button>
+                    <button class="admin-tab" onclick="showAdminTab('users')">משתמשים</button>
+                    <button class="admin-tab" onclick="showAdminTab('bulkAdd')">הוספה מרובה</button>
                     <button class="admin-tab" onclick="showAdminTab('stats')">סטטיסטיקות</button>
                     <button class="admin-tab" onclick="showAdminTab('settings')">הגדרות</button>
                 </div>
@@ -163,15 +164,115 @@
                 </div>
                 
                 <div id="adminUsersTab" class="admin-tab-content">
-                    <div class="admin-section-header">
-                        <h3>ניהול משתמשים</h3>
-                        <button id="addUserBtn" class="add-btn">
-                            <i class="fas fa-plus"></i>
-                            הוסף משתמש חדש
-                        </button>
+                    <div class="admin-section">
+                        <div class="section-header">
+                            <h3>ניהול משתמשים</h3>
+                            <button id="addUserBtn" class="btn-primary">הוסף משתמש</button>
+                        </div>
+                        <div id="adminUsersList" class="users-grid"></div>
                     </div>
-                    <div id="adminUsersList" class="admin-users-list">
-                        <!-- Admin users list will be populated by JavaScript -->
+                </div>
+                
+                <div id="adminBulkAddTab" class="admin-tab-content">
+                    <div class="admin-section">
+                        <div class="section-header">
+                            <h3>🚀 הוספה מרובה של משימות</h3>
+                            <div class="bulk-add-counter">
+                                <span id="bulkAddCounter">משימה #1</span>
+                            </div>
+                        </div>
+                        
+                        <div class="bulk-add-container">
+                            <form id="bulkAddForm" class="bulk-add-form">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>�� שם המשימה *</label>
+                                        <input type="text" name="title" required placeholder="למשל: לסדר את החדר">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>⭐ נקודות *</label>
+                                        <input type="number" name="points" min="1" max="100" required value="10">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>📝 תיאור המשימה *</label>
+                                    <textarea name="description" required placeholder="פירוט מה צריך לעשות..."></textarea>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>🏠 חדר *</label>
+                                        <select name="room" required>
+                                            <option value="">בחר חדר...</option>
+                                            <option value="סלון">סלון</option>
+                                            <option value="מטבח">מטבח</option>
+                                            <option value="חדר ילדים">חדר ילדים</option>
+                                            <option value="חדר רחצה">חדר רחצה</option>
+                                            <option value="חצר">חצר</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>⏱️ זמן משוער (דקות) *</label>
+                                        <select name="duration" required>
+                                            <option value="10">10 דקות</option>
+                                            <option value="15" selected>15 דקות</option>
+                                            <option value="20">20 דקות</option>
+                                            <option value="30">30 דקות</option>
+                                            <option value="45">45 דקות</option>
+                                            <option value="60">60 דקות</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>👥 סוג המשימה *</label>
+                                        <select name="taskType" required>
+                                            <option value="personal" selected>אישית (כל אחד עושה את שלו)</option>
+                                            <option value="shared">משותפת (כל הקודם זוכה)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>💪 רמת קושי *</label>
+                                        <select name="difficulty" required>
+                                            <option value="קל" selected>קל ⭐</option>
+                                            <option value="בינוני">בינוני ⭐⭐</option>
+                                            <option value="קשה">קשה ⭐⭐⭐</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>🎂 טווח גילאים *</label>
+                                    <input type="text" name="ageRange" required placeholder="למשל: 5-12" value="5-15">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>👨‍👩‍👧‍👦 מיועד עבור (בחר מספר משתמשים)</label>
+                                    <div id="bulkAssignedUsers" class="user-checkboxes">
+                                        <!-- Will be populated by JavaScript -->
+                                    </div>
+                                </div>
+
+                                <div class="bulk-add-actions">
+                                    <button type="button" class="btn-secondary" id="resetBulkForm">🔄 נקה טופס</button>
+                                    <button type="submit" class="btn-success" id="addAndContinue">
+                                        ➕ הוסף ועבור לבאה
+                                    </button>
+                                    <button type="button" class="btn-primary" id="addAndFinish">
+                                        ✅ הוסף וסיים
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div class="bulk-add-summary">
+                                <h4>📊 משימות שהתווספו היום:</h4>
+                                <div id="bulkAddSummary" class="summary-list">
+                                    <!-- Will show recently added tasks -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
