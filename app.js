@@ -22,7 +22,7 @@ class FamilyTaskManager {
                 {
                     id: 1,
                     name: 'אמא',
-                    birthDate: '1985-05-15',
+                    birthDate: '1987-09-30',
                     role: 'הורה',
                     avatar: null,
                     points: 0,
@@ -32,7 +32,7 @@ class FamilyTaskManager {
                 {
                     id: 2,
                     name: 'אבא',
-                    birthDate: '1983-08-22',
+                    birthDate: '1987-11-09',
                     role: 'הורה',
                     avatar: null,
                     points: 0,
