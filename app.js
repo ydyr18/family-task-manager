@@ -470,7 +470,7 @@ class FamilyTaskManager {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = async (e) => {
-                console.log('🔥 FileReader loaded image data:', e.target.result.substring(0, 50) + '...');
+                console.log('🔥 FileReader loaded image data');
                 const img = new Image();
                 img.onload = async () => {
                     console.log(`🔥 Image dimensions: ${img.width} x ${img.height}`);
@@ -501,37 +501,30 @@ class FamilyTaskManager {
                         const filename = `profile_${timestamp}.jpg`;
                         
                         try {
-                            // Store the image data in localStorage
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                                console.log('🔥 Saving image to localStorage with key:', filename);
-                                console.log('🔥 Image data preview:', reader.result.substring(0, 50) + '...');
-                                
-                                // Store the image data in localStorage
-                                localStorage.setItem(filename, reader.result);
-                                
-                                // Verify the save
-                                const savedData = localStorage.getItem(filename);
-                                console.log('🔥 Verification - Image saved successfully:', !!savedData);
-                                console.log('🔥 Saved data preview:', savedData ? savedData.substring(0, 50) + '...' : 'No data');
-                                
-                                // Return the filename that will be used to retrieve the image
-                                resolve(filename);
-                            };
-                            reader.onerror = (error) => {
-                                console.error('🔥 Error in FileReader:', error);
+                            // Create FormData and append the blob
+                            const formData = new FormData();
+                            formData.append('image', blob, filename);
+                            
+                            // Upload to public/images directory
+                            const response = await fetch('/api/upload', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            
+                            if (response.ok) {
+                                // Return the public URL of the image
+                                const imagePath = `/images/${filename}`;
+                                console.log('🔥 Image saved successfully:', imagePath);
+                                resolve(imagePath);
+                            } else {
+                                console.error('🔥 Error saving image:', await response.text());
                                 resolve(null);
-                            };
-                            reader.readAsDataURL(blob);
+                            }
                         } catch (error) {
                             console.error('🔥 Error saving image:', error);
                             resolve(null);
                         }
                     }, 'image/jpeg', quality);
-                };
-                img.onerror = (error) => {
-                    console.error('🔥 Error loading image:', error);
-                    resolve(null);
                 };
                 img.src = e.target.result;
             };
@@ -936,29 +929,16 @@ class UIManager {
         const container = document.getElementById('familyProfiles');
         const users = this.taskManager.getUsers();
         
-        // Function to generate a color from a string
-        const getColorFromName = (name) => {
-            let hash = 0;
-            for (let i = 0; i < name.length; i++) {
-                hash = name.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            const hue = hash % 360;
-            return `hsl(${hue}, 70%, 60%)`;
-        };
-        
         container.innerHTML = users.map(user => {
             const age = this.taskManager.calculateAge(user.birthDate);
             const performingStatus = this.taskManager.getUserPerformingStatus(user.id);
             const statusClass = performingStatus.isPerforming ? 'performing' : '';
             const statusText = performingStatus.isPerforming ? 'בביצוע משימה' : '';
             
-            // Generate a unique color for the user
-            const userColor = getColorFromName(user.name);
-            
             return `
                 <div class="profile-card ${statusClass}" onclick="showUserProfile(${user.id})">
-                    <div class="profile-avatar" style="background-color: ${userColor}; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.5em;">
-                        ${user.name.charAt(0)}
+                    <div class="profile-avatar">
+                        ${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : `<span class="avatar-letter">${user.name.charAt(0)}</span>`}
                         ${performingStatus.isPerforming ? '<div class="status-indicator"></div>' : ''}
                     </div>
                     <div class="profile-name">${user.name}</div>
