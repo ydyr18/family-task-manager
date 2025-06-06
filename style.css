@@ -172,33 +172,54 @@
 }
 
 .crop-btn {
-    background: #4CAF50;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: background 0.2s;
+    background: #4CAF50 !important;
+    color: white !important;
+    border: none !important;
+    padding: 0.75rem 1.5rem !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    font-weight: 500 !important;
+    transition: background 0.2s !important;
+    min-height: 44px !important;
+    min-width: 120px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
 }
 
 .crop-btn:hover {
-    background: #45a049;
+    background: #45a049 !important;
+}
+
+.crop-btn i {
+    font-size: 1.1rem !important;
+}
+
+#confirmCrop {
+    background: #4CAF50 !important;
+    color: white !important;
+}
+
+#confirmCrop:hover {
+    background: #45a049 !important;
 }
 
 .cancel-crop-btn {
-    background: #6c757d;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: background 0.2s;
+    background: #6c757d !important;
+    color: white !important;
+    border: none !important;
+    padding: 0.75rem 1.5rem !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    font-weight: 500 !important;
+    transition: background 0.2s !important;
+    min-height: 44px !important;
+    min-width: 120px !important;
 }
 
 .cancel-crop-btn:hover {
-    background: #5a6268;
+    background: #5a6268 !important;
 }
 
 /* Inline Crop Button */
@@ -224,4 +245,76 @@
 
 .crop-btn-inline i {
     font-size: 0.9rem;
+}
+
+/* Success message style */
+.message {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-weight: 500;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.message.success {
+    background: #4CAF50;
+    color: white;
+}
+
+.message i {
+    font-size: 1.2rem;
+}
+
+.fullscreen-button {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(76, 175, 80, 0.9);
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    transition: all 0.3s;
+    z-index: 9999;
+}
+
+.fullscreen-button:hover {
+    background: rgba(76, 175, 80, 1);
+    transform: scale(1.1);
+}
+
+.fullscreen-button i {
+    font-size: 1.5rem;
+}
+
+/* Hide fullscreen button when in fullscreen mode */
+:fullscreen .fullscreen-button {
+    display: none;
+}
+
+:-webkit-full-screen .fullscreen-button {
+    display: none;
+}
+
+:-moz-full-screen .fullscreen-button {
+    display: none;
+}
+
+/* Hide on desktop */
+@media (min-width: 1024px) {
+    .fullscreen-button {
+        display: none;
+    }
 } 

@@ -1,0 +1,23 @@
+At the start of each new chat session OR if 24 hours have passed since the last message, read the following files in order:
+
+1. זיכרון_עבודה_תהליכי.md
+2. rule1
+3. README.md
+
+This will ensure continuity of context and adherence to project rules across sessions.
+
+Required reading conditions:
+- New chat session starts
+- OR 24 hours have passed since last message
+
+Files to read (in order):
+1. /זיכרון_עבודה_תהליכי.md
+   Purpose: Current state and history of the project
+   
+2. /rule1
+   Purpose: Project-specific rules and guidelines
+   
+3. /README.md
+   Purpose: Project overview and documentation
+
+After reading these files, acknowledge their content before proceeding with any new requests. 

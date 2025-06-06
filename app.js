@@ -22,9 +22,9 @@ class FamilyTaskManager {
                 {
                     id: 1,
                     name: 'אמא',
-                    birthDate: '1985-05-15',
+                    birthDate: '1987-09-30',
                     role: 'הורה',
-                    avatar: null,
+                    avatar: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx4eHRseHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/2wBDAR',
                     points: 0,
                     isPerformingTask: false,
                     currentTaskId: null
@@ -32,7 +32,7 @@ class FamilyTaskManager {
                 {
                     id: 2,
                     name: 'אבא',
-                    birthDate: '1983-08-22',
+                    birthDate: '1987-11-09',
                     role: 'הורה',
                     avatar: null,
                     points: 0,
@@ -96,10 +96,8 @@ class FamilyTaskManager {
                     title: 'סידור המיטה',
                     description: 'סידור המיטה ומיטוב הכריות',
                     duration: 15,
-                    ageRange: '5-12',
-                    room: 'חדר ילדים',
+                    room: 'חדר בנים',
                     image: null,
-                    difficulty: 'קל',
                     isActive: true,
                     assignedUsers: [3, 4, 5, 6],
                     points: 10,
@@ -111,10 +109,8 @@ class FamilyTaskManager {
                     title: 'ניקוי השולחן',
                     description: 'ניגוב השולחן אחרי הארוחה',
                     duration: 30,
-                    ageRange: '6-15',
                     room: 'מטבח',
                     image: null,
-                    difficulty: 'בינוני',
                     isActive: true,
                     assignedUsers: [3, 4, 5, 6],
                     points: 20,
@@ -126,10 +122,8 @@ class FamilyTaskManager {
                     title: 'איסוף הצעצועים',
                     description: 'איסוף כל הצעצועים ושים במקום',
                     duration: 45,
-                    ageRange: '4-10',
-                    room: 'סלון',
+                    room: 'חדר משחקים',
                     image: null,
-                    difficulty: 'בינוני',
                     isActive: true,
                     assignedUsers: [3, 4, 5, 6],
                     points: 25,
@@ -158,7 +152,7 @@ class FamilyTaskManager {
                 }
             ],
             completions: [],
-            rooms: ['סלון', 'מטבח', 'חדר ילדים', 'חדר רחצה', 'חצר'],
+            rooms: ['סלון', 'מטבח', 'מרפסת', 'חדר בנות', 'חדר בנים', 'חדר כביסה', 'חדר משחקים'],
             weeklyStats: {
                 startDate: new Date().toISOString(),
                 userStats: {}
@@ -489,10 +483,37 @@ class FamilyTaskManager {
                 
                 // Draw and compress
                 ctx.drawImage(img, 0, 0, width, height);
-                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
                 
-                console.log('📷 Image compressed from', Math.round(file.size / 1024), 'KB to', Math.round(compressedDataUrl.length * 0.75 / 1024), 'KB');
-                resolve(compressedDataUrl);
+                // Instead of returning base64, save to file
+                canvas.toBlob(async (blob) => {
+                    // Generate unique filename using timestamp and random string
+                    const timestamp = Date.now();
+                    const randomStr = Math.random().toString(36).substring(7);
+                    const filename = `profile_${timestamp}_${randomStr}.jpg`;
+                    
+                    // Create FormData and append the blob
+                    const formData = new FormData();
+                    formData.append('image', blob, filename);
+                    
+                    try {
+                        // Send the file to our save endpoint
+                        const response = await fetch('http://localhost:8080/save-image', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        if (response.ok) {
+                            // Return the relative path to the saved image
+                            resolve(`/images/${filename}`);
+                        } else {
+                            console.error('Failed to save image:', await response.text());
+                            resolve(null);
+                        }
+                    } catch (error) {
+                        console.error('Error saving image:', error);
+                        resolve(null);
+                    }
+                }, 'image/jpeg', quality);
             };
             
             img.src = URL.createObjectURL(file);
@@ -724,8 +745,7 @@ class ImageCropper {
             }
         });
 
-        container.addEventListener('touchend', (e) => {
-            e.preventDefault();
+        container.addEventListener('touchend', () => {
             this.isDragging = false;
         });
 
@@ -736,37 +756,45 @@ class ImageCropper {
         });
 
         zoomIn.addEventListener('click', () => {
-            this.scale = Math.min(3, this.scale + 0.1);
+            this.scale = Math.min(2.5, this.scale + 0.1);
             zoomSlider.value = this.scale;
             this.drawImage();
         });
 
         zoomOut.addEventListener('click', () => {
-            this.scale = Math.max(0.5, this.scale - 0.1);
+            this.scale = Math.max(0.3, this.scale - 0.1);
             zoomSlider.value = this.scale;
             this.drawImage();
         });
 
-        zoomReset.addEventListener('click', () => {
-            this.scale = 1;
-            zoomSlider.value = this.scale;
-            this.drawImage();
-        });
-
-        // Action buttons
+        // Confirm and Cancel buttons
         confirmCrop.addEventListener('click', () => {
-            console.log('🎯 Confirm crop clicked');
-            const croppedDataUrl = this.getCroppedImage();
-            console.log('🎯 Got cropped image, closing modal');
-            this.closeCropper(modal);
+            const croppedImage = this.getCroppedImage();
             if (this.cropCallback) {
-                console.log('🎯 Calling crop callback');
-                this.cropCallback(croppedDataUrl);
+                this.cropCallback(croppedImage);
             }
+            this.closeCropper(modal);
+            // Show success message
+            const messageContainer = document.getElementById('messageContainer');
+            if (messageContainer) {
+                messageContainer.innerHTML = `
+                    <div class="message success">
+                        <i class="fas fa-check-circle"></i>
+                        התמונה נשמרה בהצלחה!
+                    </div>
+                `;
+                setTimeout(() => {
+                    messageContainer.innerHTML = '';
+                }, 3000);
+            }
+            // Return to home screen
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            document.getElementById('homeScreen').classList.add('active');
         });
 
         cancelCrop.addEventListener('click', () => {
-            console.log('🎯 Cancel crop clicked');
             this.closeCropper(modal);
         });
 
@@ -931,9 +959,11 @@ class UIManager {
         const icons = {
             'סלון': '<i class="fas fa-couch"></i>',
             'מטבח': '<i class="fas fa-utensils"></i>',
-            'חדר ילדים': '<i class="fas fa-bed"></i>',
-            'חדר רחצה': '<i class="fas fa-bath"></i>',
-            'חצר': '<i class="fas fa-tree"></i>'
+            'מרפסת': '<i class="fas fa-chair"></i>',
+            'חדר בנות': '<i class="fas fa-female"></i>',
+            'חדר בנים': '<i class="fas fa-male"></i>',
+            'חדר כביסה': '<i class="fas fa-tshirt"></i>',
+            'חדר משחקים': '<i class="fas fa-gamepad"></i>'
         };
         return icons[room] || '<i class="fas fa-home"></i>';
     }
@@ -1591,10 +1621,6 @@ class UIManager {
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>טווח גילאים</label>
-                    <input type="text" name="ageRange" placeholder="5-12" required>
-                </div>
-                <div class="form-group">
                     <label>חדר</label>
                     <select name="room" required>
                         ${rooms.map(room => `<option value="${room}">${room}</option>`).join('')}
@@ -1639,7 +1665,6 @@ class UIManager {
                 title: formData.get('title'),
                 description: formData.get('description'),
                 duration: parseInt(formData.get('duration')),
-                ageRange: formData.get('ageRange'),
                 room: formData.get('room'),
                 difficulty: formData.get('difficulty'),
                 points: parseInt(formData.get('points')),
@@ -2046,10 +2071,6 @@ class UIManager {
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>טווח גילאים</label>
-                    <input type="text" name="ageRange" value="${task.ageRange}" required>
-                </div>
-                <div class="form-group">
                     <label>חדר</label>
                     <select name="room" required>
                         ${rooms.map(room => `<option value="${room}" ${task.room === room ? 'selected' : ''}>${room}</option>`).join('')}
@@ -2094,7 +2115,6 @@ class UIManager {
                 title: formData.get('title'),
                 description: formData.get('description'),
                 duration: parseInt(formData.get('duration')),
-                ageRange: formData.get('ageRange'),
                 room: formData.get('room'),
                 difficulty: formData.get('difficulty'),
                 points: parseInt(formData.get('points')),
@@ -2319,5 +2339,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (!ui) {
         ui = new UIManager(taskManager);
+    }
+});
+
+// Fullscreen functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const fullscreenButton = document.getElementById('fullscreenButton');
+    
+    if (fullscreenButton) {
+        fullscreenButton.addEventListener('click', function() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            }
+        });
     }
 }); 

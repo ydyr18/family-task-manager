@@ -1,0 +1,41 @@
+# Family Task Manager Development Guidelines
+
+## Version Management
+- Keep stable versions with clear tagging (e.g. version with working image cropper)
+- Revert to stable version instead of trying to fix problematic code
+- Document major changes and stable points in the codebase
+
+## Code Structure
+- Clear separation between classes:
+  * FamilyTaskManager: Data and business logic
+  * ImageCropper: Image handling
+  * UIManager: User interface management
+- Maintain one central JavaScript file instead of splitting into many files
+- Use clear code comments and documentation
+- Keep consistent naming conventions in Hebrew
+
+## Feature Management
+- Don't add new features to stable version without thorough testing
+- Better to remove problematic features than leave them broken
+- Maintain core features like image cropping
+- Test new features in isolation before integration
+
+## Debugging and Problem Solving
+- Use console.log with emojis for easy identification (🎯 for cropper, 📷 for images, etc.)
+- Check styling changes (like green button color)
+- Return to stable version when facing complex issues
+- Document known issues and their solutions
+
+## UI/UX Considerations
+- Importance of user feedback (success messages)
+- Maintain consistent design
+- Full Hebrew language support
+- Clear user navigation and state management
+- Proper error handling and user notifications
+
+## Best Practices
+- Regular testing of core functionality
+- Clear separation of concerns
+- Consistent error handling
+- Regular backups of user data
+- Clean and maintainable code structure 

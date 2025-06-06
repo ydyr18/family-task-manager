@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>עורך משימות - Family Task Manager</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .task-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background: white;
+        }
+
+        .task-table th {
+            background: #4CAF50;
+            color: white;
+            padding: 12px;
+            text-align: right;
+            position: sticky;
+            top: 0;
+        }
+
+        .task-table td {
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .task-table input, .task-table select {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+        }
+
+        .task-table input:focus, .task-table select:focus {
+            outline: 2px solid #4CAF50;
+            border-radius: 4px;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button.secondary {
+            background: #2196F3;
+        }
+
+        button.secondary:hover {
+            background: #1976D2;
+        }
+
+        .help-text {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #2e7d32;
+        }
+
+        /* Tooltip styles */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            margin-right: 5px;
+            color: #666;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            right: 50%;
+            margin-right: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Select2 RTL fixes */
+        .select2-container {
+            width: 100% !important;
+        }
+
+        .select2-selection {
+            border: none !important;
+            background: transparent !important;
+        }
+
+        .select2-selection--multiple {
+            min-height: 38px !important;
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            float: right !important;
+            margin-right: 0 !important;
+            margin-left: 5px !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>עורך משימות - Family Task Manager</h1>
+        
+        <div class="help-text">
+            <i class="fas fa-info-circle"></i>
+            הוסף משימות בקלות על ידי מילוי הטבלה. לחץ על "הוסף שורה" להוספת משימה חדשה,
+            ועל "ייצא ל-JSON" כדי לקבל קובץ שאפשר לייבא באתר.
+        </div>
+
+        <div class="buttons">
+            <button onclick="addRow()">
+                <i class="fas fa-plus"></i>
+                הוסף שורה
+            </button>
+            <button onclick="exportToJson()" class="secondary">
+                <i class="fas fa-file-export"></i>
+                ייצא ל-JSON
+            </button>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table class="task-table" id="taskTable">
+                <thead>
+                    <tr>
+                        <th>שם המשימה <span class="tooltip"><i class="fas fa-question-circle"></i><span class="tooltiptext">שם קצר וברור למשימה</span></span></th>
+                        <th>תיאור <span class="tooltip"><i class="fas fa-question-circle"></i><span class="tooltiptext">תיאור מפורט של המשימה</span></span></th>
+                        <th>זמן (דקות) <span class="tooltip"><i class="fas fa-question-circle"></i><span class="tooltiptext">זמן משוער בדקות: 15, 30, 45, 60</span></span></th>
+                        <th>חדר <span class="tooltip"><i class="fas fa-question-circle"></i><span class="tooltiptext">סלון, מטבח, חדר ילדים, חדר רחצה, חצר</span></span></th>
+                        <th>נקודות <span class="tooltip"><i class="fas fa-question-circle"></i><span class="tooltiptext">מספר הנקודות שהמשימה שווה</span></span></th>
+                        <th>סוג משימה <span class="tooltip"><i class="fas fa-question-circle"></i><span class="tooltiptext">אישית או משותפת</span></span></th>
+                        <th>משתמשים <span class="tooltip"><i class="fas fa-question-circle"></i><span class="tooltiptext">בחר את המשתמשים שיכולים לבצע את המשימה</span></span></th>
+                        <th>פעולות</th>
+                    </tr>
+                </thead>
+                <tbody id="taskTableBody">
+                    <!-- Rows will be added here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Room options
+        const rooms = ['סלון', 'מטבח', 'מרפסת', 'חדר בנות', 'חדר בנים', 'חדר כביסה', 'חדר משחקים'];
+        
+        // Task types
+        const taskTypes = ['אישית', 'משותפת'];
+
+        // Users list
+        const users = [
+            { id: 1, name: 'אמא' },
+            { id: 2, name: 'אבא' },
+            { id: 3, name: 'טלאור' },
+            { id: 4, name: 'שירציון' },
+            { id: 5, name: 'פארי' },
+            { id: 6, name: 'נגן' },
+            { id: 7, name: 'כנה' }
+        ];
+
+        function createCell(type, options = null) {
+            const cell = document.createElement('td');
+            
+            if (type === 'select' && options) {
+                const select = document.createElement('select');
+                options.forEach(option => {
+                    const opt = document.createElement('option');
+                    opt.value = option;
+                    opt.textContent = option;
+                    select.appendChild(opt);
+                });
+                cell.appendChild(select);
+            } else if (type === 'users') {
+                const select = document.createElement('select');
+                select.multiple = true;
+                users.forEach(user => {
+                    const opt = document.createElement('option');
+                    opt.value = user.id;
+                    opt.textContent = user.name;
+                    select.appendChild(opt);
+                });
+                cell.appendChild(select);
+                // Initialize Select2 after adding to DOM
+                setTimeout(() => {
+                    $(select).select2({
+                        placeholder: 'בחר משתמשים',
+                        dir: 'rtl',
+                        language: {
+                            noResults: () => 'לא נמצאו תוצאות'
+                        }
+                    });
+                }, 0);
+            } else {
+                const input = document.createElement('input');
+                input.type = type === 'number' ? 'number' : 'text';
+                if (type === 'number') {
+                    input.min = '0';
+                }
+                cell.appendChild(input);
+            }
+            
+            return cell;
+        }
+
+        function addRow() {
+            const tbody = document.getElementById('taskTableBody');
+            const row = document.createElement('tr');
+            
+            // Add cells
+            row.appendChild(createCell('text')); // שם המשימה
+            row.appendChild(createCell('text')); // תיאור
+            row.appendChild(createCell('number')); // זמן
+            row.appendChild(createCell('select', rooms)); // חדר
+            row.appendChild(createCell('number')); // נקודות
+            row.appendChild(createCell('select', taskTypes)); // סוג משימה
+            row.appendChild(createCell('users')); // משתמשים
+            
+            // Add delete button
+            const actionsCell = document.createElement('td');
+            const deleteButton = document.createElement('button');
+            deleteButton.innerHTML = '<i class="fas fa-trash"></i>';
+            deleteButton.style.padding = '4px 8px';
+            deleteButton.style.background = '#dc3545';
+            deleteButton.onclick = () => row.remove();
+            actionsCell.appendChild(deleteButton);
+            row.appendChild(actionsCell);
+            
+            tbody.appendChild(row);
+        }
+
+        function exportToJson() {
+            const tasks = [];
+            const rows = document.getElementById('taskTableBody').getElementsByTagName('tr');
+            
+            for (let row of rows) {
+                const inputs = row.querySelectorAll('input, select');
+                
+                // Get values
+                const title = inputs[0].value;
+                const description = inputs[1].value;
+                const duration = parseInt(inputs[2].value);
+                const room = inputs[3].value;
+                const points = parseInt(inputs[4].value);
+                const taskType = inputs[5].value === 'אישית' ? 'personal' : 'shared';
+                
+                // Get selected users from Select2
+                const userSelect = $(inputs[6]);
+                const assignedUsers = userSelect.val().map(id => parseInt(id));
+                
+                // Validate required fields
+                if (!title || !description || !duration || !points || assignedUsers.length === 0) {
+                    alert('נא למלא את כל השדות החובה בכל השורות');
+                    return;
+                }
+                
+                // Create task object
+                const task = {
+                    id: Date.now() + tasks.length, // Unique ID
+                    title,
+                    description,
+                    duration,
+                    room,
+                    points,
+                    taskType,
+                    assignedUsers,
+                    isActive: true,
+                    image: null,
+                    currentlyPerformedBy: null
+                };
+                
+                tasks.push(task);
+            }
+            
+            // Create the full data structure
+            const exportData = {
+                tasks: tasks,
+                // Keep existing users and rewards
+                users: [], // Will be merged with existing data
+                rewards: [], // Will be merged with existing data
+                completions: [],
+                rooms: rooms,
+                weeklyStats: {
+                    startDate: new Date().toISOString(),
+                    userStats: {}
+                }
+            };
+            
+            // Create and download the JSON file
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `tasks-export-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // Add initial row
+        addRow();
+    </script>
+</body>
+</html> 
