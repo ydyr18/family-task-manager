@@ -505,23 +505,22 @@ class FamilyTaskManager {
                             const formData = new FormData();
                             formData.append('image', blob, filename);
                             
-                            // Upload to public/images directory
+                            // Upload to Vercel Blob Storage
                             const response = await fetch('/api/upload', {
                                 method: 'POST',
                                 body: formData
                             });
                             
                             if (response.ok) {
-                                // Return the public URL of the image
-                                const imagePath = `/images/${filename}`;
-                                console.log('🔥 Image saved successfully:', imagePath);
-                                resolve(imagePath);
+                                const data = await response.json();
+                                console.log('🔥 Image uploaded successfully:', data.url);
+                                resolve(data.url);
                             } else {
-                                console.error('🔥 Error saving image:', await response.text());
+                                console.error('🔥 Error uploading image:', await response.text());
                                 resolve(null);
                             }
                         } catch (error) {
-                            console.error('🔥 Error saving image:', error);
+                            console.error('🔥 Error uploading image:', error);
                             resolve(null);
                         }
                     }, 'image/jpeg', quality);

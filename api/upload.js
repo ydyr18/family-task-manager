@@ -1,6 +1,6 @@
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
+import { put } from '@vercel/blob';
 import formidable from 'formidable';
+import { Readable } from 'stream';
 
 export const config = {
   api: {
@@ -22,12 +22,16 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const filename = file.originalFilename;
-    const imagePath = join(process.cwd(), 'public', 'images', filename);
+    // Convert file to stream
+    const stream = Readable.from(Buffer.from(await file.arrayBuffer()));
 
-    await writeFile(imagePath, await readFile(file.filepath));
+    // Upload to Vercel Blob Storage
+    const blob = await put(file.originalFilename, stream, {
+      access: 'public',
+      contentType: file.type
+    });
 
-    return res.status(200).json({ path: `/images/${filename}` });
+    return res.status(200).json({ url: blob.url });
   } catch (error) {
     console.error('Upload error:', error);
     return res.status(500).json({ error: 'Error uploading file' });

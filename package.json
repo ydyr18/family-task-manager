@@ -4,6 +4,7 @@
   "description": "Family task manager web application",
   "main": "app.js",
   "dependencies": {
-    "formidable": "^3.5.1"
+    "formidable": "^3.5.1",
+    "@vercel/blob": "^0.22.1"
   }
 } 
