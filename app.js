@@ -24,7 +24,7 @@ class FamilyTaskManager {
                     name: 'אמא',
                     birthDate: '1987-09-30',
                     role: 'הורה',
-                    avatar: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx4eHRseHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/2wBDAR',
+                    avatar: null,
                     points: 0,
                     isPerformingTask: false,
                     currentTaskId: null
@@ -173,39 +173,41 @@ class FamilyTaskManager {
     // Save data to localStorage
     saveData(data = this.data) {
         try {
-            const dataString = JSON.stringify(data);
-            console.log('💾 Saving data, size:', Math.round(dataString.length / 1024), 'KB');
-            localStorage.setItem('familyTaskData', dataString);
-            this.data = data;
+            // Create a deep copy of the data
+            const dataToSave = JSON.parse(JSON.stringify(data));
+            
+            // Save the data
+            localStorage.setItem('familyTaskData', JSON.stringify(dataToSave));
+            this.data = dataToSave;
             console.log('✅ Data saved successfully');
+            
+            // Update the current instance data
+            this.loadData();
         } catch (error) {
             console.error('❌ Error saving data:', error);
             if (error.name === 'QuotaExceededError') {
                 alert('🚫 אחסון מלא! התמונות גדולות מדי.\n\nפתרונות:\n1. השתמש בתמונות קטנות יותר\n2. מחק תמונות ישנות\n3. עשה גיבוי והתחל מחדש');
                 
-                // Try to save without the new avatar as fallback
-                const dataWithoutNewAvatars = JSON.parse(JSON.stringify(data));
-                dataWithoutNewAvatars.users.forEach(user => {
-                    if (user.avatar && user.avatar.length > 100000) { // Remove very large avatars
+                // Try to save without large avatars as fallback
+                const dataWithoutLargeAvatars = JSON.parse(JSON.stringify(data));
+                dataWithoutLargeAvatars.users.forEach(user => {
+                    if (user.avatar && user.avatar.length > 100000) {
                         console.log('🗑️ Removing large avatar for user:', user.name);
                         user.avatar = null;
                     }
                 });
                 
                 try {
-                    localStorage.setItem('familyTaskData', JSON.stringify(dataWithoutNewAvatars));
-                    this.data = dataWithoutNewAvatars;
+                    localStorage.setItem('familyTaskData', JSON.stringify(dataWithoutLargeAvatars));
+                    this.data = dataWithoutLargeAvatars;
+                    this.loadData();
                     alert('✅ הנתונים נשמרו ללא התמונות הגדולות.');
-                    return true;
                 } catch (fallbackError) {
-                    console.error('❌ Even fallback save failed:', fallbackError);
-                    alert('💥 שגיאה קריטית! נסה לרענן את הדף או לעשות גיבוי.');
-                    return false;
+                    console.error('❌ Error in fallback save:', fallbackError);
+                    alert('❌ שגיאה בשמירת הנתונים. נסה לייצא גיבוי.');
                 }
             }
-            return false;
         }
-        return true;
     }
 
     // Get all users
@@ -464,59 +466,80 @@ class FamilyTaskManager {
     }
 
     // Helper method to compress image
-    compressImage(file, maxWidth = 200, quality = 0.7) {
-        return new Promise((resolve) => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            
-            img.onload = () => {
-                // Calculate new dimensions
-                let { width, height } = img;
-                if (width > maxWidth) {
-                    height = (height * maxWidth) / width;
-                    width = maxWidth;
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
-                
-                // Draw and compress
-                ctx.drawImage(img, 0, 0, width, height);
-                
-                // Instead of returning base64, save to file
-                canvas.toBlob(async (blob) => {
-                    // Generate unique filename using timestamp and random string
-                    const timestamp = Date.now();
-                    const randomStr = Math.random().toString(36).substring(7);
-                    const filename = `profile_${timestamp}_${randomStr}.jpg`;
+    async compressImage(file, maxWidth = 200, quality = 0.7) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                console.log('🔥 FileReader loaded image data:', e.target.result.substring(0, 50) + '...');
+                const img = new Image();
+                img.onload = async () => {
+                    console.log(`🔥 Image dimensions: ${img.width} x ${img.height}`);
                     
-                    // Create FormData and append the blob
-                    const formData = new FormData();
-                    formData.append('image', blob, filename);
+                    // Create canvas for resizing
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
                     
-                    try {
-                        // Send the file to our save endpoint
-                        const response = await fetch('http://localhost:8080/save-image', {
-                            method: 'POST',
-                            body: formData
-                        });
+                    // Calculate new dimensions
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // Draw and compress image
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Convert to blob and save
+                    canvas.toBlob(async (blob) => {
+                        console.log('🔥 Cropped image size:', blob.size);
                         
-                        if (response.ok) {
-                            // Return the relative path to the saved image
-                            resolve(`/images/${filename}`);
-                        } else {
-                            console.error('Failed to save image:', await response.text());
+                        const timestamp = Date.now();
+                        const filename = `profile_${timestamp}.jpg`;
+                        
+                        try {
+                            // Store the image data in localStorage
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                                console.log('🔥 Saving image to localStorage with key:', filename);
+                                console.log('🔥 Image data preview:', reader.result.substring(0, 50) + '...');
+                                
+                                // Store the image data in localStorage
+                                localStorage.setItem(filename, reader.result);
+                                
+                                // Verify the save
+                                const savedData = localStorage.getItem(filename);
+                                console.log('🔥 Verification - Image saved successfully:', !!savedData);
+                                console.log('🔥 Saved data preview:', savedData ? savedData.substring(0, 50) + '...' : 'No data');
+                                
+                                // Return the filename that will be used to retrieve the image
+                                resolve(filename);
+                            };
+                            reader.onerror = (error) => {
+                                console.error('🔥 Error in FileReader:', error);
+                                resolve(null);
+                            };
+                            reader.readAsDataURL(blob);
+                        } catch (error) {
+                            console.error('🔥 Error saving image:', error);
                             resolve(null);
                         }
-                    } catch (error) {
-                        console.error('Error saving image:', error);
-                        resolve(null);
-                    }
-                }, 'image/jpeg', quality);
+                    }, 'image/jpeg', quality);
+                };
+                img.onerror = (error) => {
+                    console.error('🔥 Error loading image:', error);
+                    resolve(null);
+                };
+                img.src = e.target.result;
             };
-            
-            img.src = URL.createObjectURL(file);
+            reader.onerror = () => {
+                console.error('🔥 Error reading file');
+                resolve(null);
+            };
+            reader.readAsDataURL(file);
         });
     }
 
@@ -913,16 +936,29 @@ class UIManager {
         const container = document.getElementById('familyProfiles');
         const users = this.taskManager.getUsers();
         
+        // Function to generate a color from a string
+        const getColorFromName = (name) => {
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const hue = hash % 360;
+            return `hsl(${hue}, 70%, 60%)`;
+        };
+        
         container.innerHTML = users.map(user => {
             const age = this.taskManager.calculateAge(user.birthDate);
             const performingStatus = this.taskManager.getUserPerformingStatus(user.id);
-            const statusClass = performingStatus.isPerforming ? 'performing-task' : '';
+            const statusClass = performingStatus.isPerforming ? 'performing' : '';
             const statusText = performingStatus.isPerforming ? 'בביצוע משימה' : '';
+            
+            // Generate a unique color for the user
+            const userColor = getColorFromName(user.name);
             
             return `
                 <div class="profile-card ${statusClass}" onclick="showUserProfile(${user.id})">
-                    <div class="profile-avatar">
-                        ${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : user.name.charAt(0)}
+                    <div class="profile-avatar" style="background-color: ${userColor}; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.5em;">
+                        ${user.name.charAt(0)}
                         ${performingStatus.isPerforming ? '<div class="status-indicator"></div>' : ''}
                     </div>
                     <div class="profile-name">${user.name}</div>
@@ -1073,10 +1109,13 @@ class UIManager {
         // Update profile info
         document.getElementById('profileTitle').textContent = `הפרופיל של ${user.name}`;
         
+        // Generate a unique color for the user
+        const userColor = this.getColorFromName(user.name);
+        
         // Update profile info section
         document.getElementById('profileInfo').innerHTML = `
-            <div class="profile-avatar">
-                ${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : user.name.charAt(0)}
+            <div class="profile-avatar" style="background-color: ${userColor}; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 2em;">
+                ${user.name.charAt(0)}
             </div>
             <h3>${user.name}</h3>
             <p>${user.role}</p>
@@ -1110,6 +1149,16 @@ class UIManager {
         
         this.previousScreen = 'homeScreen';
         this.showScreen('profileScreen');
+    }
+
+    // Add this helper function at the class level
+    getColorFromName(name) {
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const hue = hash % 360;
+        return `hsl(${hue}, 70%, 60%)`;
     }
 
     openActiveTaskTimer(taskId, userId) {
@@ -1535,24 +1584,29 @@ class UIManager {
         const container = document.getElementById('adminUsersList');
         const users = this.taskManager.getUsers();
         
-        container.innerHTML = users.map(user => `
-            <div class="profile-card">
-                <div class="profile-avatar">
-                    ${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : user.name.charAt(0)}
+        container.innerHTML = users.map(user => {
+            // Get the avatar from localStorage if it exists
+            const avatarData = user.avatar ? localStorage.getItem(user.avatar) : null;
+            
+            return `
+                <div class="profile-card">
+                    <div class="profile-avatar">
+                        ${avatarData ? `<img src="${avatarData}" alt="${user.name}">` : `<span class="avatar-letter">${user.name.charAt(0)}</span>`}
+                    </div>
+                    <div class="profile-name">${user.name}</div>
+                    <div class="profile-role">${user.role}</div>
+                    <div class="profile-points">
+                        <i class="fas fa-star"></i>
+                        ${user.points} נקודות
+                    </div>
+                    <div class="task-actions">
+                        <button class="btn-secondary" onclick="editUser(${user.id})">
+                            ערוך
+                        </button>
+                    </div>
                 </div>
-                <div class="profile-name">${user.name}</div>
-                <div class="profile-role">${user.role}</div>
-                <div class="profile-points">
-                    <i class="fas fa-star"></i>
-                    ${user.points} נקודות
-                </div>
-                <div class="task-actions">
-                    <button class="btn-secondary" onclick="editUser(${user.id})">
-                        ערוך
-                    </button>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     renderWeeklyStats() {
@@ -1811,13 +1865,25 @@ class UIManager {
             
             // Use image cropper
             const cropper = new ImageCropper();
-            cropper.showCropper(addSelectedFile, (croppedDataUrl) => {
+            cropper.showCropper(addSelectedFile, async (croppedDataUrl) => {
                 console.log('🔥 Add form: Cropped image received');
                 
-                // Add user with cropped avatar
-                userData.avatar = croppedDataUrl;
-                this.taskManager.addUser(userData);
-                this.showMessage('המשתמש נוסף בהצלחה עם תמונה!', 'success');
+                // Convert data URL to blob
+                const response = await fetch(croppedDataUrl);
+                const blob = await response.blob();
+                
+                // Send to server using compressImage
+                const imagePath = await this.taskManager.compressImage(blob);
+                if (imagePath) {
+                    // Add user with image path
+                    userData.avatar = imagePath;
+                    this.taskManager.addUser(userData);
+                    this.showMessage('המשתמש נוסף בהצלחה עם תמונה!', 'success');
+                } else {
+                    // Add user without image if upload failed
+                    this.taskManager.addUser(userData);
+                    this.showMessage('המשתמש נוסף, אך היתה בעיה בשמירת התמונה', 'warning');
+                }
                 
                 // Go back to home screen directly
                 this.showScreen('homeScreen');
@@ -1858,7 +1924,7 @@ class UIManager {
                     <label>תמונת פרופיל</label>
                     ${user.avatar ? `
                         <div style="margin-bottom: 1rem;">
-                            <img src="${user.avatar}" alt="תמונה נוכחית" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">
+                            <img src="${localStorage.getItem(user.avatar)}" alt="תמונה נוכחית" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">
                             <p style="font-size: 0.9rem; color: #666;">תמונה נוכחית</p>
                         </div>
                     ` : ''}
@@ -1937,13 +2003,23 @@ class UIManager {
             
             // Use image cropper
             const cropper = new ImageCropper();
-            cropper.showCropper(selectedFile, (croppedDataUrl) => {
+            cropper.showCropper(selectedFile, async (croppedDataUrl) => {
                 console.log('🔥 Cropped image received, size:', croppedDataUrl.length);
                 
-                // Update user with new avatar
-                const avatarUpdate = { avatar: croppedDataUrl };
-                this.taskManager.updateUser(userId, avatarUpdate);
-                this.showMessage('תמונת הפרופיל עודכנה בהצלחה!', 'success');
+                // Convert data URL to blob
+                const response = await fetch(croppedDataUrl);
+                const blob = await response.blob();
+                
+                // Send to server using compressImage
+                const imagePath = await this.taskManager.compressImage(blob);
+                if (imagePath) {
+                    // Update user with new avatar path
+                    const avatarUpdate = { avatar: imagePath };
+                    this.taskManager.updateUser(userId, avatarUpdate);
+                    this.showMessage('תמונת הפרופיל עודכנה בהצלחה!', 'success');
+                } else {
+                    this.showMessage('היתה בעיה בשמירת התמונה', 'error');
+                }
                 
                 // Go back to home screen directly
                 this.showScreen('homeScreen');
