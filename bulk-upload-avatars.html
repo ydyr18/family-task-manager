@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>העלאת תמונות פרופיל</title>
+    <style>
+        body {
+            font-family: 'Heebo', Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .upload-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .file-input {
+            margin: 10px 0;
+        }
+        .user-selector {
+            margin: 10px 0;
+        }
+        select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 200px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .progress {
+            background: #e2e3e5;
+            border-radius: 10px;
+            height: 20px;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            background: #007bff;
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 העלאת תמונות פרופיל</h1>
+        
+        <div class="upload-section">
+            <h3>בחר משתמש ותמונה:</h3>
+            
+            <div class="user-selector">
+                <select id="userSelect">
+                    <option value="">בחר משתמש...</option>
+                </select>
+            </div>
+            
+            <div class="file-input">
+                <input type="file" id="imageInput" accept="image/*">
+            </div>
+            
+            <button onclick="uploadSingleAvatar()">העלה תמונה</button>
+        </div>
+        
+        <div class="upload-section">
+            <h3>העלאה מרובה:</h3>
+            <div class="file-input">
+                <input type="file" id="bulkImageInput" accept="image/*" multiple>
+            </div>
+            <button onclick="uploadBulkAvatars()">העלה כל התמונות</button>
+        </div>
+        
+        <div id="status"></div>
+        <div id="progress" class="progress" style="display: none;">
+            <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <!-- Load Supabase -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://wwvlstvyqoccrgfylgfx.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3dmxzdHZ5cW9jY3JnZnlsZ2Z4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1MDg0MzAsImV4cCI6MjA3NjA4NDQzMH0.IAqFEoZUifs4dg28CwllW4C0RGWUw9b1knBWG2hr3Wk';
+        
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let users = [];
+        
+        // Load users on page load
+        async function loadUsers() {
+            try {
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('id, name')
+                    .order('name');
+                
+                if (error) throw error;
+                
+                users = data;
+                const select = document.getElementById('userSelect');
+                select.innerHTML = '<option value="">בחר משתמש...</option>';
+                
+                data.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = user.name;
+                    select.appendChild(option);
+                });
+                
+                showStatus('✅ משתמשים נטענו בהצלחה', 'success');
+            } catch (error) {
+                showStatus('❌ שגיאה בטעינת משתמשים: ' + error.message, 'error');
+            }
+        }
+        
+        // Upload single avatar
+        async function uploadSingleAvatar() {
+            const userId = document.getElementById('userSelect').value;
+            const fileInput = document.getElementById('imageInput');
+            
+            if (!userId) {
+                showStatus('❌ אנא בחר משתמש', 'error');
+                return;
+            }
+            
+            if (!fileInput.files[0]) {
+                showStatus('❌ אנא בחר תמונה', 'error');
+                return;
+            }
+            
+            const user = users.find(u => u.id == userId);
+            const file = fileInput.files[0];
+            
+            try {
+                showStatus('🔄 מעלה תמונה...', 'success');
+                
+                // Upload to Supabase Storage
+                const fileExt = file.name.split('.').pop();
+                const fileName = `avatar_${user.name}_${Date.now()}.${fileExt}`;
+                
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('user-avatars')
+                    .upload(fileName, file);
+                
+                if (uploadError) throw uploadError;
+                
+                // Get public URL
+                const { data: urlData } = supabase.storage
+                    .from('user-avatars')
+                    .getPublicUrl(fileName);
+                
+                // Update user record
+                const { error: updateError } = await supabase
+                    .from('users')
+                    .update({ avatar_url: urlData.publicUrl })
+                    .eq('id', userId);
+                
+                if (updateError) throw updateError;
+                
+                showStatus(`✅ תמונה הועלתה בהצלחה עבור ${user.name}`, 'success');
+                
+                // Clear inputs
+                document.getElementById('userSelect').value = '';
+                fileInput.value = '';
+                
+            } catch (error) {
+                showStatus('❌ שגיאה בהעלאת תמונה: ' + error.message, 'error');
+            }
+        }
+        
+        // Upload multiple avatars
+        async function uploadBulkAvatars() {
+            const fileInput = document.getElementById('bulkImageInput');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                showStatus('❌ אנא בחר תמונות', 'error');
+                return;
+            }
+            
+            if (files.length > users.length) {
+                showStatus(`❌ יותר מדי תמונות. יש ${users.length} משתמשים`, 'error');
+                return;
+            }
+            
+            document.getElementById('progress').style.display = 'block';
+            
+            try {
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const user = users[i];
+                    
+                    showStatus(`🔄 מעלה תמונה ${i + 1}/${files.length} - ${user.name}...`, 'success');
+                    
+                    // Upload to Supabase Storage
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `avatar_${user.name}_${Date.now()}.${fileExt}`;
+                    
+                    const { data: uploadData, error: uploadError } = await supabase.storage
+                        .from('user-avatars')
+                        .upload(fileName, file);
+                    
+                    if (uploadError) throw uploadError;
+                    
+                    // Get public URL
+                    const { data: urlData } = supabase.storage
+                        .from('user-avatars')
+                        .getPublicUrl(fileName);
+                    
+                    // Update user record
+                    const { error: updateError } = await supabase
+                        .from('users')
+                        .update({ avatar_url: urlData.publicUrl })
+                        .eq('id', user.id);
+                    
+                    if (updateError) throw updateError;
+                    
+                    // Update progress
+                    const progress = ((i + 1) / files.length) * 100;
+                    document.getElementById('progressBar').style.width = progress + '%';
+                }
+                
+                showStatus('🎉 כל התמונות הועלו בהצלחה!', 'success');
+                fileInput.value = '';
+                
+            } catch (error) {
+                showStatus('❌ שגיאה בהעלאת תמונות: ' + error.message, 'error');
+            }
+        }
+        
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+        }
+        
+        // Load users when page loads
+        loadUsers();
+    </script>
+</body>
+</html>
